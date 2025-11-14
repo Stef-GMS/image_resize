@@ -84,6 +84,8 @@ class _ImageResizeScreenState extends State<ImageResizeScreen> {
       if (image != null) {
         setState(() {
           _aspectRatio = image.width / image.height;
+          _widthController.text = image.width.toString();
+          _heightController.text = image.height.toString();
         });
       }
 
@@ -105,6 +107,8 @@ class _ImageResizeScreenState extends State<ImageResizeScreen> {
       if (image != null) {
         setState(() {
           _aspectRatio = image.width / image.height;
+          _widthController.text = image.width.toString();
+          _heightController.text = image.height.toString();
         });
       }
       setState(() {
