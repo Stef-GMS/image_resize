@@ -320,28 +320,22 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
         padding: const EdgeInsets.all(16.0),
         child: ListView(
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            Wrap(
+              spacing: 8.0, // horizontal spacing
+              runSpacing: 8.0, // vertical spacing
+              alignment: WrapAlignment.center,
               children: [
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: _pickImages,
-                    child: const Text('From Device'),
-                  ),
+                ElevatedButton(
+                  onPressed: _pickImages,
+                  child: const Text('From Device'),
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: _pickFromCloud,
-                    child: const Text('From Cloud'),
-                  ),
+                ElevatedButton(
+                  onPressed: _pickFromCloud,
+                  child: const Text('From Cloud'),
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: _clearImageSelections,
-                    child: const Text('Clear All'),
-                  ),
+                ElevatedButton(
+                  onPressed: _clearImageSelections,
+                  child: const Text('Clear All'),
                 ),
               ],
             ),
@@ -361,101 +355,129 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
                 ),
               ),
             const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: DropdownButton<String>(
-                    value: _dimensionType,
-                    onChanged: (String? newValue) {
-                      setState(() {
-                        _dimensionType = newValue!;
-                      });
-                    },
-                    items: <String>['pixels', 'percent', 'inches', 'cm', 'mm', 'points']
-                        .map<DropdownMenuItem<String>>((String value) {
-                          return DropdownMenuItem<String>(
-                            value: value,
-                            child: Text(value),
-                          );
-                        })
-                        .toList(),
-                  ),
+            Card(
+              margin: const EdgeInsets.symmetric(vertical: 8.0),
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: DropdownButton<String>(
+                            value: _dimensionType,
+                            onChanged: (String? newValue) {
+                              setState(() {
+                                _dimensionType = newValue!;
+                              });
+                            },
+                            items: <String>['pixels', 'percent', 'inches', 'cm', 'mm', 'points']
+                                .map<DropdownMenuItem<String>>((String value) {
+                                  return DropdownMenuItem<String>(
+                                    value: value,
+                                    child: Text(value),
+                                  );
+                                })
+                                .toList(),
+                          ),
+                        ),
+                        Expanded(
+                          child: CheckboxListTile(
+                            title: const Text('Aspect Ratio'),
+                            value: _maintainAspectRatio,
+                            onChanged: (value) {
+                              setState(() {
+                                _maintainAspectRatio = value!;
+                              });
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-                Expanded(
-                  child: CheckboxListTile(
-                    title: const Text('Aspect Ratio'),
-                    value: _maintainAspectRatio,
-                    onChanged: (value) {
-                      setState(() {
-                        _maintainAspectRatio = value!;
-                      });
-                    },
-                  ),
-                ),
-              ],
+              ),
             ),
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _widthController,
-                    focusNode: _widthFocusNode,
-                    decoration: InputDecoration(labelText: 'Width ($_dimensionType)'),
-                    keyboardType: TextInputType.number,
-                  ),
+            Card(
+              margin: const EdgeInsets.symmetric(vertical: 8.0),
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _widthController,
+                            focusNode: _widthFocusNode,
+                            decoration: InputDecoration(labelText: 'Width ($_dimensionType)'),
+                            keyboardType: TextInputType.number,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: TextField(
+                            controller: _heightController,
+                            focusNode: _heightFocusNode,
+                            decoration: InputDecoration(labelText: 'Height ($_dimensionType)'),
+                            keyboardType: TextInputType.number,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-                Expanded(
-                  child: TextField(
-                    controller: _heightController,
-                    focusNode: _heightFocusNode,
-                    decoration: InputDecoration(labelText: 'Height ($_dimensionType)'),
-                    keyboardType: TextInputType.number,
-                  ),
-                ),
-              ],
+              ),
             ),
-            Row(
-              children: [
-                Expanded(
-                  child: CheckboxListTile(
-                    title: const Text('Scale Prop.'),
-                    value: _scaleProportionally,
-                    onChanged: (value) {
-                      setState(() {
-                        _scaleProportionally = value!;
-                      });
-                    },
-                  ),
+            Card(
+              margin: const EdgeInsets.symmetric(vertical: 8.0),
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: CheckboxListTile(
+                            title: const Text('Scale Prop.'),
+                            value: _scaleProportionally,
+                            onChanged: (value) {
+                              setState(() {
+                                _scaleProportionally = value!;
+                              });
+                            },
+                          ),
+                        ),
+                        Expanded(
+                          child: CheckboxListTile(
+                            title: const Text('Resample'),
+                            value: _resampleImage,
+                            onChanged: (value) {
+                              setState(() {
+                                _resampleImage = value!;
+                              });
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-                Expanded(
-                  child: CheckboxListTile(
-                    title: const Text('Resample'),
-                    value: _resampleImage,
-                    onChanged: (value) {
-                      setState(() {
-                        _resampleImage = value!;
-                      });
-                    },
-                  ),
-                ),
-              ],
+              ),
             ),
             const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            Wrap(
+              spacing: 8.0, // horizontal spacing
+              runSpacing: 8.0, // vertical spacing
+              alignment: WrapAlignment.center,
               children: [
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: _selectSaveDirectory,
-                    child: const Text('Save Location'),
-                  ),
+                ElevatedButton(
+                  onPressed: _selectSaveDirectory,
+                  child: const Text('Save Location'),
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: _selectedImages.isNotEmpty ? _resizeImages : null,
-                    child: const Text('Resize'),
-                  ),
+                ElevatedButton(
+                  onPressed: _selectedImages.isNotEmpty ? _resizeImages : null,
+                  child: const Text('Resize'),
                 ),
               ],
             ),
