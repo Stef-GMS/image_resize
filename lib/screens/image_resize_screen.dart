@@ -1,19 +1,20 @@
 import 'dart:io';
-import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
+
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
-import 'package:permission_handler/permission_handler.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class ImageResizeScreen extends StatefulWidget {
   const ImageResizeScreen({super.key});
 
   @override
-  _ImageResizeScreenState createState() => _ImageResizeScreenState();
+  ImageResizeScreenState createState() => ImageResizeScreenState();
 }
 
-class _ImageResizeScreenState extends State<ImageResizeScreen> {
+class ImageResizeScreenState extends State<ImageResizeScreen> {
   String? _saveDirectory;
 
   final List<File> _selectedImages = [];
@@ -159,20 +160,23 @@ class _ImageResizeScreenState extends State<ImageResizeScreen> {
     if (await _requestPermission()) {
       for (final imageFile in _selectedImages) {
         final newFileName = _getNewFileName(
-            imageFile.path,
-            widthInput.round(),
-            heightInput.round(),
-            resolution,
-            _suffixController.text);
+          imageFile.path,
+          widthInput.round(),
+          heightInput.round(),
+          resolution,
+          _suffixController.text,
+        );
         final newPath = '$savePath/$newFileName';
 
         if (!_overwriteAll && await File(newPath).exists()) {
+          if (!mounted) return; // Check if the widget is still mounted
           final result = await showDialog<int>(
             context: context,
             builder: (context) => AlertDialog(
               title: const Text('File already exists'),
               content: Text(
-                  'A file named "$newFileName" already exists. Do you want to overwrite it?'),
+                'A file named "$newFileName" already exists. Do you want to overwrite it?',
+              ),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(0),
@@ -233,18 +237,18 @@ class _ImageResizeScreenState extends State<ImageResizeScreen> {
         }
 
         final resizedImage = _scaleProportionally
-            ? img.copyResize(image,
+            ? img.copyResize(
+                image,
                 width: width,
                 height: height,
-                interpolation: _resampleImage
-                    ? img.Interpolation.cubic
-                    : img.Interpolation.nearest)
-            : img.copyResize(image,
+                interpolation: _resampleImage ? img.Interpolation.cubic : img.Interpolation.nearest,
+              )
+            : img.copyResize(
+                image,
                 width: width,
                 height: height,
-                interpolation: _resampleImage
-                    ? img.Interpolation.cubic
-                    : img.Interpolation.nearest);
+                interpolation: _resampleImage ? img.Interpolation.cubic : img.Interpolation.nearest,
+              );
 
         await File(newPath).writeAsBytes(img.encodeJpg(resizedImage));
       }
@@ -274,18 +278,18 @@ class _ImageResizeScreenState extends State<ImageResizeScreen> {
     return null;
   }
 
-  String _getNewFileName(
-      String oldPath, int width, int height, int resolution, String suffix) {
+  String _getNewFileName(String oldPath, int width, int height, int resolution, String suffix) {
     final oldFileName = oldPath.split('/').last;
     final oldExtension = oldFileName.split('.').last;
-    final oldNameWithoutExtension =
-        oldFileName.substring(0, oldFileName.length - oldExtension.length - 1);
+    final oldNameWithoutExtension = oldFileName.substring(
+      0,
+      oldFileName.length - oldExtension.length - 1,
+    );
     return '$oldNameWithoutExtension$suffix.$oldExtension';
   }
 
   void _showSnackBar(String message) {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _selectSaveDirectory() async {
@@ -311,145 +315,152 @@ class _ImageResizeScreenState extends State<ImageResizeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: ListView(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              ElevatedButton(
-                onPressed: _pickImages,
-                child: const Text('Select from Device'),
-              ),
-              ElevatedButton(
-                onPressed: _pickFromCloud,
-                child: const Text('Select from Cloud'),
-              ),
-              ElevatedButton(
-                onPressed: _clearImageSelections,
-                child: const Text('Clear Image Selections'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          if (_selectedImages.isNotEmpty)
-            SizedBox(
-              height: 100,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                itemCount: _selectedImages.length,
-                itemBuilder: (context, index) {
-                  return Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Image.file(_selectedImages[index]),
-                  );
-                },
-              ),
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: ListView(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: _pickImages,
+                    child: const Text('From Device'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: _pickFromCloud,
+                    child: const Text('From Cloud'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: _clearImageSelections,
+                    child: const Text('Clear All'),
+                  ),
+                ),
+              ],
             ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: DropdownButton<String>(
-                  value: _dimensionType,
-                  onChanged: (String? newValue) {
-                    setState(() {
-                      _dimensionType = newValue!;
-                    });
-                  },
-                  items: <String>[
-                    'pixels',
-                    'percent',
-                    'inches',
-                    'cm',
-                    'mm',
-                    'points'
-                  ].map<DropdownMenuItem<String>>((String value) {
-                    return DropdownMenuItem<String>(
-                      value: value,
-                      child: Text(value),
+            const SizedBox(height: 16),
+            if (_selectedImages.isNotEmpty)
+              SizedBox(
+                height: 100,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _selectedImages.length,
+                  itemBuilder: (context, index) {
+                    return Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Image.file(_selectedImages[index]),
                     );
-                  }).toList(),
-                ),
-              ),
-              Expanded(
-                child: CheckboxListTile(
-                  title: const Text('Maintain aspect ratio'),
-                  value: _maintainAspectRatio,
-                  onChanged: (value) {
-                    setState(() {
-                      _maintainAspectRatio = value!;
-                    });
                   },
                 ),
               ),
-            ],
-          ),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _widthController,
-                  focusNode: _widthFocusNode,
-                  decoration:
-                      InputDecoration(labelText: 'Width ($_dimensionType)'),
-                  keyboardType: TextInputType.number,
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: DropdownButton<String>(
+                    value: _dimensionType,
+                    onChanged: (String? newValue) {
+                      setState(() {
+                        _dimensionType = newValue!;
+                      });
+                    },
+                    items: <String>['pixels', 'percent', 'inches', 'cm', 'mm', 'points']
+                        .map<DropdownMenuItem<String>>((String value) {
+                          return DropdownMenuItem<String>(
+                            value: value,
+                            child: Text(value),
+                          );
+                        })
+                        .toList(),
+                  ),
                 ),
-              ),
-              Expanded(
-                child: TextField(
-                  controller: _heightController,
-                  focusNode: _heightFocusNode,
-                  decoration:
-                      InputDecoration(labelText: 'Height ($_dimensionType)'),
-                  keyboardType: TextInputType.number,
+                Expanded(
+                  child: CheckboxListTile(
+                    title: const Text('Aspect Ratio'),
+                    value: _maintainAspectRatio,
+                    onChanged: (value) {
+                      setState(() {
+                        _maintainAspectRatio = value!;
+                      });
+                    },
+                  ),
                 ),
-              ),
-            ],
-          ),
-          Row(
-            children: [
-              Expanded(
-                child: CheckboxListTile(
-                  title: const Text('Scale proportionally'),
-                  value: _scaleProportionally,
-                  onChanged: (value) {
-                    setState(() {
-                      _scaleProportionally = value!;
-                    });
-                  },
+              ],
+            ),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _widthController,
+                    focusNode: _widthFocusNode,
+                    decoration: InputDecoration(labelText: 'Width ($_dimensionType)'),
+                    keyboardType: TextInputType.number,
+                  ),
                 ),
-              ),
-              Expanded(
-                child: CheckboxListTile(
-                  title: const Text('Resample image'),
-                  value: _resampleImage,
-                  onChanged: (value) {
-                    setState(() {
-                      _resampleImage = value!;
-                    });
-                  },
+                Expanded(
+                  child: TextField(
+                    controller: _heightController,
+                    focusNode: _heightFocusNode,
+                    decoration: InputDecoration(labelText: 'Height ($_dimensionType)'),
+                    keyboardType: TextInputType.number,
+                  ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              ElevatedButton(
-                onPressed: _selectSaveDirectory,
-                child: const Text('Choose Save Location'),
-              ),
-              ElevatedButton(
-                onPressed:
-                    _selectedImages.isNotEmpty ? _resizeImages : null,
-                child: const Text('Resize Images'),
-              ),
-            ],
-          ),
-        ],
+              ],
+            ),
+            Row(
+              children: [
+                Expanded(
+                  child: CheckboxListTile(
+                    title: const Text('Scale Prop.'),
+                    value: _scaleProportionally,
+                    onChanged: (value) {
+                      setState(() {
+                        _scaleProportionally = value!;
+                      });
+                    },
+                  ),
+                ),
+                Expanded(
+                  child: CheckboxListTile(
+                    title: const Text('Resample'),
+                    value: _resampleImage,
+                    onChanged: (value) {
+                      setState(() {
+                        _resampleImage = value!;
+                      });
+                    },
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: _selectSaveDirectory,
+                    child: const Text('Save Location'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: _selectedImages.isNotEmpty ? _resizeImages : null,
+                    child: const Text('Resize'),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
