@@ -462,6 +462,10 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
                         ),
                       ],
                     ),
+                    TextField(
+                      controller: _suffixController,
+                      decoration: const InputDecoration(labelText: 'File Suffix (e.g., _resized)'),
+                    ),
                   ],
                 ),
               ),
