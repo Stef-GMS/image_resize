@@ -89,9 +89,7 @@ class _ImageResizeScreenState extends State<ImageResizeScreen> {
 
       setState(() {
         _selectedImages.addAll(pickedFiles.map((e) => File(e.path)));
-        if (_saveDirectory == null) {
-          _saveDirectory = File(pickedFiles.first.path).parent.path;
-        }
+        _saveDirectory = File(pickedFiles.first.path).parent.path;
       });
     }
   }
@@ -111,9 +109,7 @@ class _ImageResizeScreenState extends State<ImageResizeScreen> {
       }
       setState(() {
         _selectedImages.addAll(result.paths.map((path) => File(path!)));
-        if (_saveDirectory == null) {
-          _saveDirectory = File(result.files.first.path!).parent.path;
-        }
+        _saveDirectory = File(result.files.first.path!).parent.path;
       });
     }
   }
@@ -140,21 +136,17 @@ class _ImageResizeScreenState extends State<ImageResizeScreen> {
       return;
     }
 
-    if (_saveDirectory == null) {
+    var savePath = _saveDirectory;
+    if (savePath == null) {
       await _selectSaveDirectory();
-      if (_saveDirectory == null) {
+      savePath = _saveDirectory;
+      if (savePath == null) {
         _showSnackBar('Please select a save directory.');
         return;
       }
     }
 
     if (await _requestPermission()) {
-      final savePath = _saveDirectory;
-      if (savePath == null) {
-        _showSnackBar('Could not determine save directory.');
-        return;
-      }
-
       for (final imageFile in _selectedImages) {
         final newFileName = _getNewFileName(
             imageFile.path,
