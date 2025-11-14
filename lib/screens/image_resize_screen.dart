@@ -348,68 +348,91 @@ class _ImageResizeScreenState extends State<ImageResizeScreen> {
               ),
             ),
           const SizedBox(height: 16),
-          DropdownButton<String>(
-            value: _dimensionType,
-            onChanged: (String? newValue) {
-              setState(() {
-                _dimensionType = newValue!;
-              });
-            },
-            items: <String>['pixels', 'percent', 'inches', 'cm', 'mm', 'points']
-                .map<DropdownMenuItem<String>>((String value) {
-              return DropdownMenuItem<String>(
-                value: value,
-                child: Text(value),
-              );
-            }).toList(),
+          Row(
+            children: [
+              Expanded(
+                child: DropdownButton<String>(
+                  value: _dimensionType,
+                  onChanged: (String? newValue) {
+                    setState(() {
+                      _dimensionType = newValue!;
+                    });
+                  },
+                  items: <String>[
+                    'pixels',
+                    'percent',
+                    'inches',
+                    'cm',
+                    'mm',
+                    'points'
+                  ].map<DropdownMenuItem<String>>((String value) {
+                    return DropdownMenuItem<String>(
+                      value: value,
+                      child: Text(value),
+                    );
+                  }).toList(),
+                ),
+              ),
+              Expanded(
+                child: CheckboxListTile(
+                  title: const Text('Maintain aspect ratio'),
+                  value: _maintainAspectRatio,
+                  onChanged: (value) {
+                    setState(() {
+                      _maintainAspectRatio = value!;
+                    });
+                  },
+                ),
+              ),
+            ],
           ),
-          CheckboxListTile(
-            title: const Text('Maintain aspect ratio'),
-            value: _maintainAspectRatio,
-            onChanged: (value) {
-              setState(() {
-                _maintainAspectRatio = value!;
-              });
-            },
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _widthController,
+                  focusNode: _widthFocusNode,
+                  decoration:
+                      InputDecoration(labelText: 'Width ($_dimensionType)'),
+                  keyboardType: TextInputType.number,
+                ),
+              ),
+              Expanded(
+                child: TextField(
+                  controller: _heightController,
+                  focusNode: _heightFocusNode,
+                  decoration:
+                      InputDecoration(labelText: 'Height ($_dimensionType)'),
+                  keyboardType: TextInputType.number,
+                ),
+              ),
+            ],
           ),
-          TextField(
-            controller: _widthController,
-            focusNode: _widthFocusNode,
-            decoration: InputDecoration(labelText: 'Width ($_dimensionType)'),
-            keyboardType: TextInputType.number,
-          ),
-          TextField(
-            controller: _heightController,
-            focusNode: _heightFocusNode,
-            decoration: InputDecoration(labelText: 'Height ($_dimensionType)'),
-            keyboardType: TextInputType.number,
-          ),
-          TextField(
-            controller: _resolutionController,
-            decoration: const InputDecoration(labelText: 'Resolution (DPI)'),
-            keyboardType: TextInputType.number,
-          ),
-          TextField(
-            controller: _suffixController,
-            decoration: const InputDecoration(labelText: 'Filename Suffix'),
-          ),
-          CheckboxListTile(
-            title: const Text('Scale proportionally'),
-            value: _scaleProportionally,
-            onChanged: (value) {
-              setState(() {
-                _scaleProportionally = value!;
-              });
-            },
-          ),
-          CheckboxListTile(
-            title: const Text('Resample image'),
-            value: _resampleImage,
-            onChanged: (value) {
-              setState(() {
-                _resampleImage = value!;
-              });
-            },
+          Row(
+            children: [
+              Expanded(
+                child: CheckboxListTile(
+                  title: const Text('Scale proportionally'),
+                  value: _scaleProportionally,
+                  onChanged: (value) {
+                    setState(() {
+                      _scaleProportionally = value!;
+                    });
+                  },
+                ),
+              ),
+              Expanded(
+                child: CheckboxListTile(
+                  title: const Text('Resample image'),
+                  value: _resampleImage,
+                  onChanged: (value) {
+                    setState(() {
+                      _resampleImage = value!;
+                    });
+                  },
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 16),
           ElevatedButton(
