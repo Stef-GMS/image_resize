@@ -25,6 +25,7 @@ class _ImageResizeScreenState extends State<ImageResizeScreen> {
   bool _resampleImage = true;
   bool _maintainAspectRatio = true;
   double? _aspectRatio;
+  bool _overwriteAll = false;
 
   final _widthFocusNode = FocusNode();
   final _heightFocusNode = FocusNode();
@@ -165,8 +166,8 @@ class _ImageResizeScreenState extends State<ImageResizeScreen> {
             _suffixController.text);
         final newPath = '$savePath/$newFileName';
 
-        if (await File(newPath).exists()) {
-          final overwrite = await showDialog<bool>(
+        if (!_overwriteAll && await File(newPath).exists()) {
+          final result = await showDialog<int>(
             context: context,
             builder: (context) => AlertDialog(
               title: const Text('File already exists'),
@@ -174,18 +175,26 @@ class _ImageResizeScreenState extends State<ImageResizeScreen> {
                   'A file named "$newFileName" already exists. Do you want to overwrite it?'),
               actions: [
                 TextButton(
-                  onPressed: () => Navigator.of(context).pop(false),
+                  onPressed: () => Navigator.of(context).pop(0),
                   child: const Text('Cancel'),
                 ),
                 TextButton(
-                  onPressed: () => Navigator.of(context).pop(true),
+                  onPressed: () => Navigator.of(context).pop(1),
                   child: const Text('Overwrite'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(2),
+                  child: const Text('Overwrite All'),
                 ),
               ],
             ),
           );
-          if (overwrite != true) {
+          if (result == 0) {
             continue;
+          } else if (result == 2) {
+            setState(() {
+              _overwriteAll = true;
+            });
           }
         }
 
