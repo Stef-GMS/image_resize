@@ -435,20 +435,19 @@ class _ImageResizeScreenState extends State<ImageResizeScreen> {
             ],
           ),
           const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: _selectSaveDirectory,
-            child: const Text('Choose Save Location'),
-          ),
-          if (_saveDirectory != null)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8.0),
-              child: Text('Save Location: $_saveDirectory'),
-            ),
-          const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed:
-                _selectedImages.isNotEmpty ? _resizeImages : null,
-            child: const Text('Resize Images'),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              ElevatedButton(
+                onPressed: _selectSaveDirectory,
+                child: const Text('Choose Save Location'),
+              ),
+              ElevatedButton(
+                onPressed:
+                    _selectedImages.isNotEmpty ? _resizeImages : null,
+                child: const Text('Resize Images'),
+              ),
+            ],
           ),
         ],
       ),
