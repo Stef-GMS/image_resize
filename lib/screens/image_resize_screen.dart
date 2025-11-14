@@ -138,11 +138,16 @@ class _ImageResizeScreenState extends State<ImageResizeScreen> {
 
     var savePath = _saveDirectory;
     if (savePath == null) {
-      await _selectSaveDirectory();
-      savePath = _saveDirectory;
-      if (savePath == null) {
-        _showSnackBar('Please select a save directory.');
-        return;
+      final defaultDownloads = await _getDownloadsDirectory();
+      if (defaultDownloads != null) {
+        savePath = defaultDownloads.path;
+      } else {
+        await _selectSaveDirectory();
+        savePath = _saveDirectory;
+        if (savePath == null) {
+          _showSnackBar('Please select a save directory.');
+          return;
+        }
       }
     }
 
@@ -175,7 +180,9 @@ class _ImageResizeScreenState extends State<ImageResizeScreen> {
               ],
             ),
           );
-          if (overwrite != true) {
+          if (overwrite == true) {
+            await File(newPath).delete();
+          } else {
             continue;
           }
         }
