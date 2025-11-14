@@ -299,6 +299,16 @@ class _ImageResizeScreenState extends State<ImageResizeScreen> {
     }
   }
 
+  void _clearImageSelections() {
+    setState(() {
+      _selectedImages.clear();
+      _saveDirectory = null;
+      _aspectRatio = null;
+      _widthController.clear();
+      _heightController.clear();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -313,6 +323,11 @@ class _ImageResizeScreenState extends State<ImageResizeScreen> {
           ElevatedButton(
             onPressed: _pickFromCloud,
             child: const Text('Select from Cloud'),
+          ),
+          const SizedBox(height: 8),
+          ElevatedButton(
+            onPressed: _clearImageSelections,
+            child: const Text('Clear Image Selections'),
           ),
           const SizedBox(height: 16),
           if (_selectedImages.isNotEmpty)
