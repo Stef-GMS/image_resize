@@ -101,7 +101,8 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
   Future<void> _pickFromCloud() async {
     final result = await FilePicker.platform.pickFiles(
       allowMultiple: true,
-      type: FileType.image,
+      type: FileType.custom,
+      allowedExtensions: ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'],
     );
     if (result != null && result.files.isNotEmpty) {
       final firstImageFile = File(result.files.first.path!);
