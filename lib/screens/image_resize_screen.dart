@@ -315,19 +315,22 @@ class _ImageResizeScreenState extends State<ImageResizeScreen> {
       padding: const EdgeInsets.all(16.0),
       child: ListView(
         children: [
-          ElevatedButton(
-            onPressed: _pickImages,
-            child: const Text('Select from Device'),
-          ),
-          const SizedBox(height: 8),
-          ElevatedButton(
-            onPressed: _pickFromCloud,
-            child: const Text('Select from Cloud'),
-          ),
-          const SizedBox(height: 8),
-          ElevatedButton(
-            onPressed: _clearImageSelections,
-            child: const Text('Clear Image Selections'),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              ElevatedButton(
+                onPressed: _pickImages,
+                child: const Text('Select from Device'),
+              ),
+              ElevatedButton(
+                onPressed: _pickFromCloud,
+                child: const Text('Select from Cloud'),
+              ),
+              ElevatedButton(
+                onPressed: _clearImageSelections,
+                child: const Text('Clear Image Selections'),
+              ),
+            ],
           ),
           const SizedBox(height: 16),
           if (_selectedImages.isNotEmpty)
