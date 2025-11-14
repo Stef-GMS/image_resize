@@ -1,4 +1,3 @@
-
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -24,11 +23,70 @@ class _ImageResizeScreenState extends State<ImageResizeScreen> {
   final _suffixController = TextEditingController();
   bool _scaleProportionally = true;
   bool _resampleImage = true;
+  bool _maintainAspectRatio = true;
+  double? _aspectRatio;
+
+  final _widthFocusNode = FocusNode();
+  final _heightFocusNode = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    _widthFocusNode.addListener(_onWidthFocusChange);
+    _heightFocusNode.addListener(_onHeightFocusChange);
+  }
+
+  @override
+  void dispose() {
+    _widthFocusNode.removeListener(_onWidthFocusChange);
+    _heightFocusNode.removeListener(_onHeightFocusChange);
+    _widthController.dispose();
+    _heightController.dispose();
+    _resolutionController.dispose();
+    _suffixController.dispose();
+    _widthFocusNode.dispose();
+    _heightFocusNode.dispose();
+    super.dispose();
+  }
+
+  void _onWidthFocusChange() {
+    if (!_widthFocusNode.hasFocus &&
+        _maintainAspectRatio &&
+        _aspectRatio != null &&
+        _widthController.text.isNotEmpty) {
+      final width = double.tryParse(_widthController.text);
+      if (width != null) {
+        final height = (width / _aspectRatio!).round();
+        _heightController.text = height.toString();
+      }
+    }
+  }
+
+  void _onHeightFocusChange() {
+    if (!_heightFocusNode.hasFocus &&
+        _maintainAspectRatio &&
+        _aspectRatio != null &&
+        _heightController.text.isNotEmpty) {
+      final height = double.tryParse(_heightController.text);
+      if (height != null) {
+        final width = (height * _aspectRatio!).round();
+        _widthController.text = width.toString();
+      }
+    }
+  }
 
   Future<void> _pickImages() async {
     final imagePicker = ImagePicker();
     final pickedFiles = await imagePicker.pickMultiImage();
     if (pickedFiles.isNotEmpty) {
+      final firstImageFile = File(pickedFiles.first.path);
+      final image = img.decodeImage(await firstImageFile.readAsBytes());
+      if (image != null) {
+        setState(() {
+          _aspectRatio = image.width / image.height;
+        });
+      }
+
       setState(() {
         _selectedImages.addAll(pickedFiles.map((e) => File(e.path)));
         if (_saveDirectory == null) {
@@ -44,6 +102,13 @@ class _ImageResizeScreenState extends State<ImageResizeScreen> {
       type: FileType.image,
     );
     if (result != null && result.files.isNotEmpty) {
+      final firstImageFile = File(result.files.first.path!);
+      final image = img.decodeImage(await firstImageFile.readAsBytes());
+      if (image != null) {
+        setState(() {
+          _aspectRatio = image.width / image.height;
+        });
+      }
       setState(() {
         _selectedImages.addAll(result.paths.map((path) => File(path!)));
         if (_saveDirectory == null) {
@@ -75,14 +140,54 @@ class _ImageResizeScreenState extends State<ImageResizeScreen> {
       return;
     }
 
+    if (_saveDirectory == null) {
+      await _selectSaveDirectory();
+      if (_saveDirectory == null) {
+        _showSnackBar('Please select a save directory.');
+        return;
+      }
+    }
+
     if (await _requestPermission()) {
-      final savePath = _saveDirectory ?? (await _getDownloadsDirectory())?.path;
+      final savePath = _saveDirectory;
       if (savePath == null) {
         _showSnackBar('Could not determine save directory.');
         return;
       }
 
       for (final imageFile in _selectedImages) {
+        final newFileName = _getNewFileName(
+            imageFile.path,
+            widthInput.round(),
+            heightInput.round(),
+            resolution,
+            _suffixController.text);
+        final newPath = '$savePath/$newFileName';
+
+        if (await File(newPath).exists()) {
+          final overwrite = await showDialog<bool>(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('File already exists'),
+              content: Text(
+                  'A file named "$newFileName" already exists. Do you want to overwrite it?'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  child: const Text('Overwrite'),
+                ),
+              ],
+            ),
+          );
+          if (overwrite != true) {
+            continue;
+          }
+        }
+
         final image = img.decodeImage(await imageFile.readAsBytes());
         if (image == null) continue;
 
@@ -131,17 +236,9 @@ class _ImageResizeScreenState extends State<ImageResizeScreen> {
                     ? img.Interpolation.cubic
                     : img.Interpolation.nearest);
 
-        final newFileName = _getNewFileName(
-            imageFile.path, width, height, resolution, _suffixController.text);
-
-        final newPath = '$savePath/$newFileName';
         await File(newPath).writeAsBytes(img.encodeJpg(resizedImage));
       }
       _showSnackBar('Images resized and saved to $savePath');
-      setState(() {
-        _selectedImages.clear();
-        _saveDirectory = null;
-      });
     }
   }
 
@@ -238,13 +335,24 @@ class _ImageResizeScreenState extends State<ImageResizeScreen> {
               );
             }).toList(),
           ),
+          CheckboxListTile(
+            title: const Text('Maintain aspect ratio'),
+            value: _maintainAspectRatio,
+            onChanged: (value) {
+              setState(() {
+                _maintainAspectRatio = value!;
+              });
+            },
+          ),
           TextField(
             controller: _widthController,
+            focusNode: _widthFocusNode,
             decoration: InputDecoration(labelText: 'Width ($_dimensionType)'),
             keyboardType: TextInputType.number,
           ),
           TextField(
             controller: _heightController,
+            focusNode: _heightFocusNode,
             decoration: InputDecoration(labelText: 'Height ($_dimensionType)'),
             keyboardType: TextInputType.number,
           ),
