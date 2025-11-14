@@ -136,13 +136,22 @@ class _ImageResizeScreenState extends State<ImageResizeScreen> {
       return;
     }
 
-    if (await _requestPermission()) {
-      final savePath = _saveDirectory;
-      if (savePath == null) {
-        _showSnackBar('Could not determine save directory.');
-        return;
+    var savePath = _saveDirectory;
+    if (savePath == null) {
+      final defaultDownloads = await _getDownloadsDirectory();
+      if (defaultDownloads != null) {
+        savePath = defaultDownloads.path;
+      } else {
+        await _selectSaveDirectory();
+        savePath = _saveDirectory;
+        if (savePath == null) {
+          _showSnackBar('Please select a save directory.');
+          return;
+        }
       }
+    }
 
+    if (await _requestPermission()) {
       for (final imageFile in _selectedImages) {
         final newFileName = _getNewFileName(
             imageFile.path,
