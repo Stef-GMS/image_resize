@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:image_resize/screens/image_resize_screen.dart';
-import 'package.image_resize/theme.dart';
+import 'package:image_resize/theme.dart';
 
 void main() {
   runApp(const MainApp());

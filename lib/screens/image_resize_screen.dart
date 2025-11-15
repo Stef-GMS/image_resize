@@ -183,6 +183,8 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
       for (final imageFile in _selectedImages) {
         final newFileName = _getNewFileName(
           imageFile.path,
+          widthInput.round(),
+          heightInput.round(),
           _suffixController.text,
         );
         final newPath = '$savePath/$newFileName';
@@ -296,13 +298,17 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
     return null;
   }
 
-  String _getNewFileName(String oldPath, String suffix) {
+  String _getNewFileName(
+      String oldPath, int width, int height, String suffix) {
     final oldFileName = oldPath.split('/').last;
     final oldExtension = oldFileName.split('.').last;
     final oldNameWithoutExtension = oldFileName.substring(
       0,
       oldFileName.length - oldExtension.length - 1,
     );
+    if (suffix.isEmpty) {
+      return '$oldNameWithoutExtension-${width}x${height}.$oldExtension';
+    }
     return '$oldNameWithoutExtension$suffix.$oldExtension';
   }
 
