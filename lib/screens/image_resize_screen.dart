@@ -8,9 +8,14 @@ import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../screens/settings_screen.dart';
+import '../widgets/dimensions_section.dart';
 
 class ImageResizeScreen extends StatefulWidget {
-  const ImageResizeScreen({super.key});
+  const ImageResizeScreen(
+      {super.key, required this.handleThemeChange, required this.themeMode});
+
+  final void Function(ThemeMode) handleThemeChange;
+  final ThemeMode themeMode;
 
   @override
   ImageResizeScreenState createState() => ImageResizeScreenState();
@@ -334,7 +339,26 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
                   children: [
                     _buildSourceSection(theme),
                     const SizedBox(height: 16),
-                    _buildDimensionsSection(theme),
+                    DimensionsSection(
+                      theme: theme,
+                      maintainAspectRatio: _maintainAspectRatio,
+                      onAspectRatioChanged: (value) {
+                        setState(() {
+                          _maintainAspectRatio = value!;
+                        });
+                      },
+                      dimensionType: _dimensionType,
+                      onUnitChanged: (value) {
+                        setState(() {
+                          _dimensionType = value!;
+                        });
+                      },
+                      widthController: _widthController,
+                      widthFocusNode: _widthFocusNode,
+                      heightController: _heightController,
+                      heightFocusNode: _heightFocusNode,
+                      unitMap: _unitMap,
+                    ),
                     const SizedBox(height: 16),
                     _buildOptionsSection(theme),
                     const SizedBox(height: 16),
@@ -373,7 +397,10 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => const SettingsScreen(),
+                  builder: (context) => SettingsScreen(
+                    handleThemeChange: widget.handleThemeChange,
+                    themeMode: widget.themeMode,
+                  ),
                 ),
               );
             },
@@ -450,54 +477,6 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
     );
   }
 
-  Widget _buildDimensionsSection(ThemeData theme) {
-    return _buildSectionCard(
-      title: 'Dimensions',
-      headerAccessory: Row(
-        children: [
-          Text(
-            'Lock Aspect Ratio',
-            style: theme.textTheme.bodyMedium,
-          ),
-          const SizedBox(width: 8),
-          SizedBox(
-            height: 20,
-            width: 20,
-            child: Checkbox(
-              value: _maintainAspectRatio,
-              onChanged: (value) {
-                setState(() {
-                  _maintainAspectRatio = value!;
-                });
-              },
-            ),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          _buildDropdownRow(theme),
-          const SizedBox(height: 16),
-          _buildTextFieldRow(
-            theme: theme,
-            label: 'Width',
-            controller: _widthController,
-            focusNode: _widthFocusNode,
-            unit: _unitMap[_dimensionType]!,
-          ),
-          const SizedBox(height: 16),
-          _buildTextFieldRow(
-            theme: theme,
-            label: 'Height',
-            controller: _heightController,
-            focusNode: _heightFocusNode,
-            unit: _unitMap[_dimensionType]!,
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildOptionsSection(ThemeData theme) {
     return _buildSectionCard(
       title: 'Options',
@@ -542,32 +521,34 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
   Widget _buildSaveLocationSection(ThemeData theme) {
     return _buildSectionCard(
       title: 'Save Location',
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 12.0),
-              decoration: BoxDecoration(
-                color: theme.inputDecorationTheme.fillColor,
-                borderRadius: BorderRadius.circular(12.0),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: _selectSaveDirectory,
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(999),
+                ),
               ),
-              child: Text(
-                _saveDirectory ?? 'No directory selected',
-                style: theme.textTheme.bodyMedium,
-                overflow: TextOverflow.ellipsis,
-              ),
+              child: const Text('Choose Folder'),
             ),
           ),
-          const SizedBox(width: 8),
-          ElevatedButton(
-            onPressed: _selectSaveDirectory,
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(999),
-              ),
+          const SizedBox(height: 12),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 12.0),
+            decoration: BoxDecoration(
+              color: theme.inputDecorationTheme.fillColor,
+              borderRadius: BorderRadius.circular(12.0),
             ),
-            child: const Text('Choose Folder'),
+            child: Text(
+              _saveDirectory ?? 'No directory selected',
+              style: theme.textTheme.bodyMedium,
+            ),
           ),
         ],
       ),

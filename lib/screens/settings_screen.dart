@@ -1,14 +1,11 @@
 import 'package:flutter/material.dart';
 
-class SettingsScreen extends StatefulWidget {
-  const SettingsScreen({super.key});
+class SettingsScreen extends StatelessWidget {
+  const SettingsScreen(
+      {super.key, required this.handleThemeChange, required this.themeMode});
 
-  @override
-  _SettingsScreenState createState() => _SettingsScreenState();
-}
-
-class _SettingsScreenState extends State<SettingsScreen> {
-  String _selectedCloudDrive = 'icloud';
+  final void Function(ThemeMode) handleThemeChange;
+  final ThemeMode themeMode;
 
   @override
   Widget build(BuildContext context) {
@@ -21,31 +18,39 @@ class _SettingsScreenState extends State<SettingsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Cloud Drive',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+            Text(
+              'Theme',
+              style: Theme.of(context).textTheme.titleLarge,
             ),
-            RadioListTile<String>(
-              title: const Text('iCloud'),
-              value: 'icloud',
-              groupValue: _selectedCloudDrive,
-              onChanged: (String? value) {
-                setState(() {
-                  _selectedCloudDrive = value!;
-                });
+            const SizedBox(height: 16),
+            RadioListTile<ThemeMode>(
+              title: const Text('System Default'),
+              value: ThemeMode.system,
+              groupValue: themeMode,
+              onChanged: (ThemeMode? value) {
+                if (value != null) {
+                  handleThemeChange(value);
+                }
               },
             ),
-            RadioListTile<String>(
-              title: const Text('Google Drive'),
-              value: 'google_drive',
-              groupValue: _selectedCloudDrive,
-              onChanged: (String? value) {
-                setState(() {
-                  _selectedCloudDrive = value!;
-                });
+            RadioListTile<ThemeMode>(
+              title: const Text('Light'),
+              value: ThemeMode.light,
+              groupValue: themeMode,
+              onChanged: (ThemeMode? value) {
+                if (value != null) {
+                  handleThemeChange(value);
+                }
+              },
+            ),
+            RadioListTile<ThemeMode>(
+              title: const Text('Dark'),
+              value: ThemeMode.dark,
+              groupValue: themeMode,
+              onChanged: (ThemeMode? value) {
+                if (value != null) {
+                  handleThemeChange(value);
+                }
               },
             ),
           ],
