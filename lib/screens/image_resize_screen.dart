@@ -4,6 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
 import 'package:image_picker/image_picker.dart';
+import 'package:exif/exif.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -97,13 +98,17 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
     final pickedFiles = await imagePicker.pickMultiImage();
     if (pickedFiles.isNotEmpty) {
       final firstImageFile = File(pickedFiles.first.path);
-      final image = img.decodeImage(await firstImageFile.readAsBytes());
+      final fileBytes = await firstImageFile.readAsBytes();
+      final image = img.decodeImage(fileBytes);
+      final exifData = await readExifFromBytes(fileBytes);
+
       if (image != null) {
         setState(() {
           _firstImage = image;
           _aspectRatio = image.width / image.height;
-          if (image.exif.ifd0[282] != null && image.exif.ifd0[282]!.toInt() > 0) {
-            _dpi = image.exif.ifd0[282]!.toInt();
+          final xResolution = exifData['Image XResolution'];
+          if (xResolution != null) {
+            _dpi = xResolution.values.firstAsInt();
           } else {
             _dpi = 72;
           }
@@ -187,13 +192,17 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
     );
     if (result != null && result.files.isNotEmpty) {
       final firstImageFile = File(result.files.first.path!);
-      final image = img.decodeImage(await firstImageFile.readAsBytes());
+      final fileBytes = await firstImageFile.readAsBytes();
+      final image = img.decodeImage(fileBytes);
+      final exifData = await readExifFromBytes(fileBytes);
+
       if (image != null) {
         setState(() {
           _firstImage = image;
           _aspectRatio = image.width / image.height;
-          if (image.exif.ifd0[282] != null && image.exif.ifd0[282]!.toInt() > 0) {
-            _dpi = image.exif.ifd0[282]!.toInt();
+          final xResolution = exifData['Image XResolution'];
+          if (xResolution != null) {
+            _dpi = xResolution.values.firstAsInt();
           } else {
             _dpi = 72;
           }
