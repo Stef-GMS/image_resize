@@ -32,6 +32,7 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
   bool _resampleImage = true;
   bool _maintainAspectRatio = true;
   double? _aspectRatio;
+  img.Image? _firstImage;
   bool _overwriteAll = false;
   bool _userEditedSuffix = false;
   bool _includeExif = true;
@@ -98,9 +99,11 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
       final image = img.decodeImage(await firstImageFile.readAsBytes());
       if (image != null) {
         setState(() {
+          _firstImage = image;
           _aspectRatio = image.width / image.height;
           _widthController.text = image.width.toString();
           _heightController.text = image.height.toString();
+          _updateSuffix();
         });
       }
 
@@ -116,6 +119,7 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
       _selectedImages.clear();
       _saveDirectory = null;
       _aspectRatio = null;
+      _firstImage = null;
       _widthController.clear();
       _heightController.clear();
       _suffixController.clear();
@@ -123,12 +127,47 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
     });
   }
 
+  (int, int) _calculatePixelDimensions() {
+    if (_firstImage == null) return (0, 0);
+
+    final widthInput = double.tryParse(_widthController.text) ?? 0;
+    final heightInput = double.tryParse(_heightController.text) ?? 0;
+    const resolution = 72;
+
+    switch (_dimensionType) {
+      case 'percentage':
+        return (
+          (_firstImage!.width * widthInput / 100).round(),
+          (_firstImage!.height * heightInput / 100).round()
+        );
+      case 'inches':
+        return (
+          (widthInput * resolution).round(),
+          (heightInput * resolution).round()
+        );
+      case 'cm':
+        return (
+          (widthInput * resolution / 2.54).round(),
+          (heightInput * resolution / 2.54).round()
+        );
+      case 'mm':
+        return (
+          (widthInput * resolution / 25.4).round(),
+          (heightInput * resolution / 25.4).round()
+        );
+      case 'pixels':
+      default:
+        return (widthInput.round(), heightInput.round());
+    }
+  }
+
   void _updateSuffix() {
     if (!_userEditedSuffix) {
-      final width = _widthController.text;
-      final height = _heightController.text;
-      if (width.isNotEmpty && height.isNotEmpty) {
+      final (width, height) = _calculatePixelDimensions();
+      if (width > 0 && height > 0) {
         _suffixController.text = '_${width}x$height';
+      } else {
+        _suffixController.text = '';
       }
     }
   }
@@ -144,6 +183,7 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
       final image = img.decodeImage(await firstImageFile.readAsBytes());
       if (image != null) {
         setState(() {
+          _firstImage = image;
           _aspectRatio = image.width / image.height;
           _widthController.text = image.width.toString();
           _heightController.text = image.height.toString();
@@ -247,33 +287,7 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
         final image = img.decodeImage(await imageFile.readAsBytes());
         if (image == null) continue;
 
-        final int width;
-        final int height;
-        const resolution = 72;
-
-        switch (_dimensionType) {
-          case 'percentage':
-            width = (image.width * widthInput / 100).round();
-            height = (image.height * heightInput / 100).round();
-            break;
-          case 'inches':
-            width = (widthInput * resolution).round();
-            height = (heightInput * resolution).round();
-            break;
-          case 'cm':
-            width = (widthInput * resolution / 2.54).round();
-            height = (heightInput * resolution / 2.54).round();
-            break;
-          case 'mm':
-            width = (widthInput * resolution / 25.4).round();
-            height = (heightInput * resolution / 25.4).round();
-            break;
-          case 'pixels':
-          default:
-            width = widthInput.round();
-            height = heightInput.round();
-            break;
-        }
+        final (width, height) = _calculatePixelDimensions();
 
         final resizedImage = _scaleProportionally
             ? img.copyResize(
@@ -401,6 +415,7 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
                       onUnitChanged: (value) {
                         setState(() {
                           _dimensionType = value!;
+                          _updateSuffix();
                         });
                       },
                       widthController: _widthController,
