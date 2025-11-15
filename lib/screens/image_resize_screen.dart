@@ -7,6 +7,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+import '../screens/settings_screen.dart';
+
 class ImageResizeScreen extends StatefulWidget {
   const ImageResizeScreen({super.key});
 
@@ -20,7 +22,6 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
   final List<File> _selectedImages = [];
   final _widthController = TextEditingController();
   final _heightController = TextEditingController();
-  final _resolutionController = TextEditingController();
   final _suffixController = TextEditingController();
   bool _scaleProportionally = true;
   bool _resampleImage = true;
@@ -44,7 +45,6 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
     _heightFocusNode.removeListener(_onHeightFocusChange);
     _widthController.dispose();
     _heightController.dispose();
-    _resolutionController.dispose();
     _suffixController.dispose();
     _widthFocusNode.dispose();
     _heightFocusNode.dispose();
@@ -98,6 +98,16 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
     }
   }
 
+  void _clearImageSelections() {
+    setState(() {
+      _selectedImages.clear();
+      _saveDirectory = null;
+      _aspectRatio = null;
+      _widthController.clear();
+      _heightController.clear();
+    });
+  }
+
   Future<void> _pickFromCloud() async {
     final result = await FilePicker.platform.pickFiles(
       allowMultiple: true,
@@ -122,6 +132,13 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
   }
 
   String _dimensionType = 'pixels';
+  final Map<String, String> _unitMap = {
+    'pixels': 'px',
+    'percentage': '%',
+    'cm': 'cm',
+    'mm': 'mm',
+    'inches': 'in'
+  };
 
   Future<void> _resizeImages() async {
     if (_selectedImages.isEmpty) {
@@ -136,7 +153,6 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
 
     final widthInput = double.tryParse(_widthController.text);
     final heightInput = double.tryParse(_heightController.text);
-    final resolution = int.tryParse(_resolutionController.text) ?? 72;
 
     if (widthInput == null || heightInput == null) {
       _showSnackBar('Invalid width or height.');
@@ -162,15 +178,12 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
       for (final imageFile in _selectedImages) {
         final newFileName = _getNewFileName(
           imageFile.path,
-          widthInput.round(),
-          heightInput.round(),
-          resolution,
           _suffixController.text,
         );
         final newPath = '$savePath/$newFileName';
 
         if (!_overwriteAll && await File(newPath).exists()) {
-          if (!mounted) return; // Check if the widget is still mounted
+          if (!mounted) return;
           final result = await showDialog<int>(
             context: context,
             builder: (context) => AlertDialog(
@@ -208,9 +221,10 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
 
         final int width;
         final int height;
+        const resolution = 72;
 
         switch (_dimensionType) {
-          case 'percent':
+          case 'percentage':
             width = (image.width * widthInput / 100).round();
             height = (image.height * heightInput / 100).round();
             break;
@@ -226,10 +240,6 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
             width = (widthInput * resolution / 25.4).round();
             height = (heightInput * resolution / 25.4).round();
             break;
-          case 'points':
-            width = (widthInput * resolution / 72).round();
-            height = (heightInput * resolution / 72).round();
-            break;
           case 'pixels':
           default:
             width = widthInput.round();
@@ -242,13 +252,15 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
                 image,
                 width: width,
                 height: height,
-                interpolation: _resampleImage ? img.Interpolation.cubic : img.Interpolation.nearest,
+                interpolation:
+                    _resampleImage ? img.Interpolation.cubic : img.Interpolation.nearest,
               )
             : img.copyResize(
                 image,
                 width: width,
                 height: height,
-                interpolation: _resampleImage ? img.Interpolation.cubic : img.Interpolation.nearest,
+                interpolation:
+                    _resampleImage ? img.Interpolation.cubic : img.Interpolation.nearest,
               );
 
         await File(newPath).writeAsBytes(img.encodeJpg(resizedImage));
@@ -279,7 +291,7 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
     return null;
   }
 
-  String _getNewFileName(String oldPath, int width, int height, int resolution, String suffix) {
+  String _getNewFileName(String oldPath, String suffix) {
     final oldFileName = oldPath.split('/').last;
     final oldExtension = oldFileName.split('.').last;
     final oldNameWithoutExtension = oldFileName.substring(
@@ -304,187 +316,451 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
     }
   }
 
-  void _clearImageSelections() {
-    setState(() {
-      _selectedImages.clear();
-      _saveDirectory = null;
-      _aspectRatio = null;
-      _widthController.clear();
-      _heightController.clear();
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
+    final theme = Theme.of(context);
+    final isDarkMode = theme.brightness == Brightness.dark;
+
+    return Scaffold(
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: Column(
+            children: [
+              _buildHeader(isDarkMode),
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.only(top: 8.0),
+                  children: [
+                    _buildSourceSection(theme),
+                    const SizedBox(height: 16),
+                    _buildDimensionsSection(theme),
+                    const SizedBox(height: 16),
+                    _buildOptionsSection(theme),
+                    const SizedBox(height: 16),
+                    _buildOutputSection(theme),
+                    const SizedBox(height: 16),
+                    _buildSaveLocationSection(theme),
+                    const SizedBox(height: 24),
+                    _buildResizeButton(),
+                    const SizedBox(height: 16),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader(bool isDarkMode) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            'Image Resizer',
+            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: isDarkMode ? Colors.white : Colors.black,
+                ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.settings_outlined),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const SettingsScreen(),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSourceSection(ThemeData theme) {
+    return _buildSectionCard(
+      title: 'Source',
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: _buildIconButton(
+                  theme: theme,
+                  icon: Icons.photo_library_outlined,
+                  label: 'Device',
+                  onPressed: _pickImages,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildIconButton(
+                  theme: theme,
+                  icon: Icons.cloud_upload_outlined,
+                  label: 'Cloud',
+                  onPressed: _pickFromCloud,
+                ),
+              ),
+            ],
+          ),
+          if (_selectedImages.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 100,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: _selectedImages.length,
+                itemBuilder: (context, index) {
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8.0),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8.0),
+                      child: Image.file(
+                        _selectedImages[index],
+                        width: 100,
+                        height: 100,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _clearImageSelections,
+                style: ElevatedButton.styleFrom(
+                  foregroundColor: theme.colorScheme.error,
+                  backgroundColor: theme.colorScheme.error.withOpacity(0.1),
+                ),
+                child: const Text('Clear'),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDimensionsSection(ThemeData theme) {
+    return _buildSectionCard(
+      title: 'Dimensions',
+      headerAccessory: Row(
+        children: [
+          Text(
+            'Lock Aspect Ratio',
+            style: theme.textTheme.bodyMedium,
+          ),
+          const SizedBox(width: 8),
+          SizedBox(
+            height: 20,
+            width: 20,
+            child: Checkbox(
+              value: _maintainAspectRatio,
+              onChanged: (value) {
+                setState(() {
+                  _maintainAspectRatio = value!;
+                });
+              },
+            ),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          _buildDropdownRow(theme),
+          const SizedBox(height: 16),
+          _buildTextFieldRow(
+            theme: theme,
+            label: 'Width',
+            controller: _widthController,
+            focusNode: _widthFocusNode,
+            unit: _unitMap[_dimensionType]!,
+          ),
+          const SizedBox(height: 16),
+          _buildTextFieldRow(
+            theme: theme,
+            label: 'Height',
+            controller: _heightController,
+            focusNode: _heightFocusNode,
+            unit: _unitMap[_dimensionType]!,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOptionsSection(ThemeData theme) {
+    return _buildSectionCard(
+      title: 'Options',
+      child: Column(
+        children: [
+          _buildCheckboxRow(
+            label: 'Scale Proportionally',
+            value: _scaleProportionally,
+            onChanged: (value) {
+              setState(() {
+                _scaleProportionally = value!;
+              });
+            },
+          ),
+          const Divider(),
+          _buildCheckboxRow(
+            label: 'Resample Image',
+            value: _resampleImage,
+            onChanged: (value) {
+              setState(() {
+                _resampleImage = value!;
+              });
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOutputSection(ThemeData theme) {
+    return _buildSectionCard(
+      title: 'Output',
+      child: _buildTextFieldRow(
+        theme: theme,
+        label: 'File Suffix',
+        controller: _suffixController,
+        placeholder: 'e.g., _resized',
+      ),
+    );
+  }
+
+  Widget _buildSaveLocationSection(ThemeData theme) {
+    return _buildSectionCard(
+      title: 'Save Location',
+      child: Row(
+        children: [
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 12.0),
+              decoration: BoxDecoration(
+                color: theme.inputDecorationTheme.fillColor,
+                borderRadius: BorderRadius.circular(12.0),
+              ),
+              child: Text(
+                _saveDirectory ?? 'No directory selected',
+                style: theme.textTheme.bodyMedium,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          ElevatedButton(
+            onPressed: _selectSaveDirectory,
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+            child: const Text('Choose Folder'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildResizeButton() {
+    return ElevatedButton(
+      onPressed: _selectedImages.isNotEmpty ? _resizeImages : null,
+      style: ElevatedButton.styleFrom(
+        foregroundColor: Colors.white,
+        backgroundColor: Theme.of(context).primaryColor,
+        minimumSize: const Size(double.infinity, 50),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(999),
+        ),
+        textStyle: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      child: const Text('Resize'),
+    );
+  }
+
+  Widget _buildSectionCard({
+    required String title,
+    required Widget child,
+    Widget? headerAccessory,
+  }) {
+    final theme = Theme.of(context);
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16.0),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: ListView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Wrap(
-              spacing: 8.0, // horizontal spacing
-              runSpacing: 8.0, // vertical spacing
-              alignment: WrapAlignment.center,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                ElevatedButton(
-                  onPressed: _pickImages,
-                  child: const Text('From Device'),
+                Text(
+                  title,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: theme.textTheme.bodySmall?.color,
+                  ),
                 ),
-                ElevatedButton(
-                  onPressed: _pickFromCloud,
-                  child: const Text('From Cloud'),
-                ),
-                ElevatedButton(
-                  onPressed: _clearImageSelections,
-                  child: const Text('Clear All'),
-                ),
+                if (headerAccessory != null) headerAccessory,
               ],
             ),
             const SizedBox(height: 16),
-            if (_selectedImages.isNotEmpty)
-              SizedBox(
-                height: 100,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: _selectedImages.length,
-                  itemBuilder: (context, index) {
-                    return Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Image.file(_selectedImages[index]),
-                    );
-                  },
-                ),
-              ),
-            const SizedBox(height: 16),
-            Card(
-              margin: const EdgeInsets.symmetric(vertical: 8.0),
-              child: Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: DropdownButton<String>(
-                            value: _dimensionType,
-                            onChanged: (String? newValue) {
-                              setState(() {
-                                _dimensionType = newValue!;
-                              });
-                            },
-                            items: <String>['pixels', 'percent', 'inches', 'cm', 'mm', 'points']
-                                .map<DropdownMenuItem<String>>((String value) {
-                                  return DropdownMenuItem<String>(
-                                    value: value,
-                                    child: Text(value),
-                                  );
-                                })
-                                .toList(),
-                          ),
-                        ),
-                        Expanded(
-                          child: CheckboxListTile(
-                            title: const Text('Aspect Ratio'),
-                            value: _maintainAspectRatio,
-                            onChanged: (value) {
-                              setState(() {
-                                _maintainAspectRatio = value!;
-                              });
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+            child,
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildIconButton({
+    required ThemeData theme,
+    required IconData icon,
+    required String label,
+    required VoidCallback onPressed,
+  }) {
+    return ElevatedButton.icon(
+      onPressed: onPressed,
+      icon: Icon(icon, size: 16),
+      label: Text(label),
+      style: ElevatedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(999),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDropdownRow(ThemeData theme) {
+    return Row(
+      children: [
+        SizedBox(
+          width: 80,
+          child: Text(
+            'Units',
+            style: theme.textTheme.bodyMedium,
+          ),
+        ),
+        Expanded(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12.0),
+            decoration: BoxDecoration(
+              color: theme.inputDecorationTheme.fillColor,
+              borderRadius: BorderRadius.circular(12.0),
+            ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: _dimensionType,
+                isExpanded: true,
+                items:
+                    _unitMap.keys.map<DropdownMenuItem<String>>((String value) {
+                  return DropdownMenuItem<String>(
+                    value: value,
+                    child: Text(value),
+                  );
+                }).toList(),
+                onChanged: (String? newValue) {
+                  setState(() {
+                    _dimensionType = newValue!;
+                  });
+                },
               ),
             ),
-            Card(
-              margin: const EdgeInsets.symmetric(vertical: 8.0),
-              child: Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: _widthController,
-                            focusNode: _widthFocusNode,
-                            decoration: InputDecoration(labelText: 'Width ($_dimensionType)'),
-                            keyboardType: TextInputType.number,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: TextField(
-                            controller: _heightController,
-                            focusNode: _heightFocusNode,
-                            decoration: InputDecoration(labelText: 'Height ($_dimensionType)'),
-                            keyboardType: TextInputType.number,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTextFieldRow({
+    required ThemeData theme,
+    required String label,
+    required TextEditingController controller,
+    FocusNode? focusNode,
+    String? placeholder,
+    String? unit,
+  }) {
+    return Row(
+      children: [
+        SizedBox(
+          width: 80,
+          child: Text(
+            label,
+            style: theme.textTheme.bodyMedium,
+          ),
+        ),
+        Expanded(
+          child: TextField(
+            controller: controller,
+            focusNode: focusNode,
+            keyboardType: TextInputType.number,
+            decoration: InputDecoration(
+              hintText: placeholder,
+              isDense: true,
+              filled: true,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12.0),
+                borderSide: BorderSide.none,
               ),
             ),
-            Card(
-              margin: const EdgeInsets.symmetric(vertical: 8.0),
-              child: Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: CheckboxListTile(
-                            title: const Text('Scale Prop.'),
-                            value: _scaleProportionally,
-                            onChanged: (value) {
-                              setState(() {
-                                _scaleProportionally = value!;
-                              });
-                            },
-                          ),
-                        ),
-                        Expanded(
-                          child: CheckboxListTile(
-                            title: const Text('Resample'),
-                            value: _resampleImage,
-                            onChanged: (value) {
-                              setState(() {
-                                _resampleImage = value!;
-                              });
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                    TextField(
-                      controller: _suffixController,
-                      decoration: const InputDecoration(labelText: 'File Suffix (e.g., _resized)'),
-                    ),
-                  ],
-                ),
+          ),
+        ),
+        if (unit != null) ...[
+          const SizedBox(width: 8),
+          SizedBox(
+            width: 30,
+            child: Text(
+              unit,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.textTheme.bodySmall?.color,
               ),
             ),
-            const SizedBox(height: 16),
-            Wrap(
-              spacing: 8.0, // horizontal spacing
-              runSpacing: 8.0, // vertical spacing
-              alignment: WrapAlignment.center,
-              children: [
-                ElevatedButton(
-                  onPressed: _selectSaveDirectory,
-                  child: const Text('Save Location'),
-                ),
-                ElevatedButton(
-                  onPressed: _selectedImages.isNotEmpty ? _resizeImages : null,
-                  child: const Text('Resize'),
-                ),
-              ],
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildCheckboxRow({
+    required String label,
+    required bool value,
+    required ValueChanged<bool?> onChanged,
+  }) {
+    return InkWell(
+      onTap: () => onChanged(!value),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8.0),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              label,
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            SizedBox(
+              height: 20,
+              width: 20,
+              child: Checkbox(
+                value: value,
+                onChanged: onChanged,
+              ),
             ),
           ],
         ),
