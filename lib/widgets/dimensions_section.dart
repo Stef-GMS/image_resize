@@ -67,7 +67,13 @@ class DimensionsSection extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 16),
-            _buildDropdownRow(theme),
+            _buildDropdownRow(
+              theme,
+              'Units',
+              dimensionType,
+              unitMap.keys.toList(),
+              onUnitChanged,
+            ),
             const SizedBox(height: 16),
             _buildTextFieldRow(
               theme: theme,
@@ -90,13 +96,14 @@ class DimensionsSection extends StatelessWidget {
     );
   }
 
-  Widget _buildDropdownRow(ThemeData theme) {
+  Widget _buildDropdownRow(ThemeData theme, String label, String value,
+      List<String> items, ValueChanged<String?> onChanged) {
     return Row(
       children: [
         SizedBox(
           width: 80,
           child: Text(
-            'Units',
+            label,
             style: theme.textTheme.bodyMedium,
           ),
         ),
@@ -109,15 +116,15 @@ class DimensionsSection extends StatelessWidget {
             ),
             child: DropdownButtonHideUnderline(
               child: DropdownButton<String>(
-                value: dimensionType,
+                value: value,
                 isExpanded: true,
-                items: unitMap.keys.map<DropdownMenuItem<String>>((String value) {
+                items: items.map<DropdownMenuItem<String>>((String value) {
                   return DropdownMenuItem<String>(
                     value: value,
                     child: Text(value),
                   );
                 }).toList(),
-                onChanged: onUnitChanged,
+                onChanged: onChanged,
               ),
             ),
           ),

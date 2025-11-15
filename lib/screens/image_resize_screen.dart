@@ -33,6 +33,9 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
   bool _maintainAspectRatio = true;
   double? _aspectRatio;
   bool _overwriteAll = false;
+  bool _userEditedSuffix = false;
+  bool _includeExif = true;
+  String _outputFormat = 'Same as Original';
 
   final _widthFocusNode = FocusNode();
   final _heightFocusNode = FocusNode();
@@ -42,6 +45,11 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
     super.initState();
     _widthFocusNode.addListener(_onWidthFocusChange);
     _heightFocusNode.addListener(_onHeightFocusChange);
+    _widthController.addListener(_updateSuffix);
+    _heightController.addListener(_updateSuffix);
+    _suffixController.addListener(() {
+      _userEditedSuffix = true;
+    });
   }
 
   @override
@@ -110,7 +118,19 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
       _aspectRatio = null;
       _widthController.clear();
       _heightController.clear();
+      _suffixController.clear();
+      _userEditedSuffix = false;
     });
+  }
+
+  void _updateSuffix() {
+    if (!_userEditedSuffix) {
+      final width = _widthController.text;
+      final height = _heightController.text;
+      if (width.isNotEmpty && height.isNotEmpty) {
+        _suffixController.text = '_${width}x$height';
+      }
+    }
   }
 
   Future<void> _pickFromCloud() async {
@@ -127,6 +147,7 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
           _aspectRatio = image.width / image.height;
           _widthController.text = image.width.toString();
           _heightController.text = image.height.toString();
+          _updateSuffix();
         });
       }
       setState(() {
@@ -270,7 +291,25 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
                     _resampleImage ? img.Interpolation.cubic : img.Interpolation.nearest,
               );
 
-        await File(newPath).writeAsBytes(img.encodeJpg(resizedImage));
+        if (_includeExif) {
+          resizedImage.exif = image.exif;
+        }
+
+        List<int> encodedImage;
+        if (_outputFormat == 'jpg') {
+          encodedImage = img.encodeJpg(resizedImage);
+        } else if (_outputFormat == 'png') {
+          encodedImage = img.encodePng(resizedImage);
+        } else {
+          final oldExtension = imageFile.path.split('.').last.toLowerCase();
+          if (oldExtension == 'png') {
+            encodedImage = img.encodePng(resizedImage);
+          } else {
+            encodedImage = img.encodeJpg(resizedImage);
+          }
+        }
+
+        await File(newPath).writeAsBytes(encodedImage);
       }
       _showSnackBar('Images resized and saved to $savePath');
     }
@@ -306,10 +345,15 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
       0,
       oldFileName.length - oldExtension.length - 1,
     );
-    if (suffix.isEmpty) {
-      return '$oldNameWithoutExtension-${width}x${height}.$oldExtension';
+
+    String newExtension;
+    if (_outputFormat == 'Same as Original') {
+      newExtension = oldExtension.toLowerCase();
+    } else {
+      newExtension = _outputFormat.toLowerCase();
     }
-    return '$oldNameWithoutExtension$suffix.$oldExtension';
+
+    return '$oldNameWithoutExtension$suffix.$newExtension';
   }
 
   void _showSnackBar(String message) {
@@ -507,6 +551,16 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
               });
             },
           ),
+          const Divider(),
+          _buildCheckboxRow(
+            label: 'Include metadata (EXIF)',
+            value: _includeExif,
+            onChanged: (value) {
+              setState(() {
+                _includeExif = value!;
+              });
+            },
+          ),
         ],
       ),
     );
@@ -515,11 +569,27 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
   Widget _buildOutputSection(ThemeData theme) {
     return _buildSectionCard(
       title: 'Output',
-      child: _buildTextFieldRow(
-        theme: theme,
-        label: 'File Suffix',
-        controller: _suffixController,
-        placeholder: 'e.g., _resized',
+      child: Column(
+        children: [
+          _buildTextFieldRow(
+            theme: theme,
+            label: 'File Suffix',
+            controller: _suffixController,
+            placeholder: 'e.g., _resized',
+          ),
+          const SizedBox(height: 16),
+          _buildDropdownRow(
+            theme,
+            'Output Format',
+            _outputFormat,
+            ['Same as Original', 'jpg', 'png'],
+            (value) {
+              setState(() {
+                _outputFormat = value!;
+              });
+            },
+          ),
+        ],
       ),
     );
   }
@@ -554,6 +624,7 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
             child: Text(
               _saveDirectory ?? 'No directory selected',
               style: theme.textTheme.bodyMedium,
+              softWrap: true,
             ),
           ),
         ],
@@ -635,13 +706,14 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
     );
   }
 
-  Widget _buildDropdownRow(ThemeData theme) {
+  Widget _buildDropdownRow(ThemeData theme, String label, String value,
+      List<String> items, ValueChanged<String?> onChanged) {
     return Row(
       children: [
         SizedBox(
           width: 80,
           child: Text(
-            'Units',
+            label,
             style: theme.textTheme.bodyMedium,
           ),
         ),
@@ -654,20 +726,15 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
             ),
             child: DropdownButtonHideUnderline(
               child: DropdownButton<String>(
-                value: _dimensionType,
+                value: value,
                 isExpanded: true,
-                items:
-                    _unitMap.keys.map<DropdownMenuItem<String>>((String value) {
+                items: items.map<DropdownMenuItem<String>>((String value) {
                   return DropdownMenuItem<String>(
                     value: value,
                     child: Text(value),
                   );
                 }).toList(),
-                onChanged: (String? newValue) {
-                  setState(() {
-                    _dimensionType = newValue!;
-                  });
-                },
+                onChanged: onChanged,
               ),
             ),
           ),
