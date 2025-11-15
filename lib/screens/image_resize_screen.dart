@@ -102,8 +102,8 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
         setState(() {
           _firstImage = image;
           _aspectRatio = image.width / image.height;
-          if (image.exif.xResolution != null && image.exif.xResolution! > 0) {
-            _dpi = image.exif.xResolution!.toInt();
+          if (image.exif.ifd0[282] != null && image.exif.ifd0[282]!.toInt() > 0) {
+            _dpi = image.exif.ifd0[282]!.toInt();
           } else {
             _dpi = 72;
           }
@@ -192,8 +192,8 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
         setState(() {
           _firstImage = image;
           _aspectRatio = image.width / image.height;
-          if (image.exif.xResolution != null && image.exif.xResolution! > 0) {
-            _dpi = image.exif.xResolution!.toInt();
+          if (image.exif.ifd0[282] != null && image.exif.ifd0[282]!.toInt() > 0) {
+            _dpi = image.exif.ifd0[282]!.toInt();
           } else {
             _dpi = 72;
           }
