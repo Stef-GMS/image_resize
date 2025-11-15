@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
   static const _primaryColor = Color(0xFF6366F1);
@@ -13,7 +12,7 @@ class AppTheme {
     primaryColor: _primaryColor,
     scaffoldBackgroundColor: _backgroundColorLight,
     cardColor: _cardColorLight,
-    textTheme: GoogleFonts.interTextTheme(ThemeData.light().textTheme),
+    fontFamily: 'Inter',
     appBarTheme: const AppBarTheme(
       backgroundColor: _backgroundColorLight,
       elevation: 0,
@@ -35,7 +34,7 @@ class AppTheme {
     primaryColor: _primaryColor,
     scaffoldBackgroundColor: _backgroundColorDark,
     cardColor: _cardColorDark,
-    textTheme: GoogleFonts.interTextTheme(ThemeData.dark().textTheme),
+    fontFamily: 'Inter',
     appBarTheme: const AppBarTheme(
       backgroundColor: _backgroundColorDark,
       elevation: 0,

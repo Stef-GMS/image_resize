@@ -37,6 +37,7 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
   bool _userEditedSuffix = false;
   bool _includeExif = true;
   String _outputFormat = 'Same as Original';
+  int _dpi = 72;
 
   final _widthFocusNode = FocusNode();
   final _heightFocusNode = FocusNode();
@@ -101,8 +102,14 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
         setState(() {
           _firstImage = image;
           _aspectRatio = image.width / image.height;
+          if (image.exif.xResolution != null && image.exif.xResolution! > 0) {
+            _dpi = image.exif.xResolution!.toInt();
+          } else {
+            _dpi = 72;
+          }
           _widthController.text = image.width.toString();
           _heightController.text = image.height.toString();
+          _userEditedSuffix = false;
           _updateSuffix();
         });
       }
@@ -165,7 +172,7 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
     if (!_userEditedSuffix) {
       final (width, height) = _calculatePixelDimensions();
       if (width > 0 && height > 0) {
-        _suffixController.text = '_${width}x$height';
+        _suffixController.text = '_${width}x${height}_$_dpi';
       } else {
         _suffixController.text = '';
       }
@@ -185,8 +192,14 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
         setState(() {
           _firstImage = image;
           _aspectRatio = image.width / image.height;
+          if (image.exif.xResolution != null && image.exif.xResolution! > 0) {
+            _dpi = image.exif.xResolution!.toInt();
+          } else {
+            _dpi = 72;
+          }
           _widthController.text = image.width.toString();
           _heightController.text = image.height.toString();
+          _userEditedSuffix = false;
           _updateSuffix();
         });
       }
