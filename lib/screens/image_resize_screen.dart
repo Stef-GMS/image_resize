@@ -11,8 +11,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 class ImageResizeScreen extends StatefulWidget {
-  const ImageResizeScreen(
-      {super.key, required this.handleThemeChange, required this.themeMode});
+  const ImageResizeScreen({super.key, required this.handleThemeChange, required this.themeMode});
 
   final void Function(ThemeMode) handleThemeChange;
   final ThemeMode themeMode;
@@ -149,22 +148,19 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
       case 'percentage':
         return (
           (_firstImage!.width * widthInput / 100).round(),
-          (_firstImage!.height * heightInput / 100).round()
+          (_firstImage!.height * heightInput / 100).round(),
         );
       case 'inches':
-        return (
-          (widthInput * resolution).round(),
-          (heightInput * resolution).round()
-        );
+        return ((widthInput * resolution).round(), (heightInput * resolution).round());
       case 'cm':
         return (
           (widthInput * resolution / 2.54).round(),
-          (heightInput * resolution / 2.54).round()
+          (heightInput * resolution / 2.54).round(),
         );
       case 'mm':
         return (
           (widthInput * resolution / 25.4).round(),
-          (heightInput * resolution / 25.4).round()
+          (heightInput * resolution / 25.4).round(),
         );
       case 'pixels':
       default:
@@ -224,7 +220,7 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
     'percentage': '%',
     'cm': 'cm',
     'mm': 'mm',
-    'inches': 'in'
+    'inches': 'in',
   };
 
   Future<void> _resizeImages() async {
@@ -315,15 +311,13 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
                 image,
                 width: width,
                 height: height,
-                interpolation:
-                    _resampleImage ? img.Interpolation.cubic : img.Interpolation.nearest,
+                interpolation: _resampleImage ? img.Interpolation.cubic : img.Interpolation.nearest,
               )
             : img.copyResize(
                 image,
                 width: width,
                 height: height,
-                interpolation:
-                    _resampleImage ? img.Interpolation.cubic : img.Interpolation.nearest,
+                interpolation: _resampleImage ? img.Interpolation.cubic : img.Interpolation.nearest,
               );
 
         if (_includeExif) {
@@ -372,8 +366,7 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
     return null;
   }
 
-  String _getNewFileName(
-      String oldPath, int width, int height, String suffix) {
+  String _getNewFileName(String oldPath, int width, int height, String suffix) {
     final oldFileName = oldPath.split('/').last;
     final oldExtension = oldFileName.split('.').last;
     final oldNameWithoutExtension = oldFileName.substring(
@@ -473,9 +466,9 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
           Text(
             'Image Resizer',
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: isDarkMode ? Colors.white : Colors.black,
-                ),
+              fontWeight: FontWeight.bold,
+              color: isDarkMode ? Colors.white : Colors.black,
+            ),
           ),
           IconButton(
             icon: const Icon(Icons.settings_outlined),
@@ -552,7 +545,7 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
                 onPressed: _clearImageSelections,
                 style: ElevatedButton.styleFrom(
                   foregroundColor: theme.colorScheme.error,
-                  backgroundColor: theme.colorScheme.error.withOpacity(0.1),
+                  backgroundColor: theme.colorScheme.error.withValues(alpha: 0.1),
                 ),
                 child: const Text('Clear'),
               ),
@@ -742,8 +735,13 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
     );
   }
 
-  Widget _buildDropdownRow(ThemeData theme, String label, String value,
-      List<String> items, ValueChanged<String?> onChanged) {
+  Widget _buildDropdownRow(
+    ThemeData theme,
+    String label,
+    String value,
+    List<String> items,
+    ValueChanged<String?> onChanged,
+  ) {
     return Row(
       children: [
         SizedBox(
