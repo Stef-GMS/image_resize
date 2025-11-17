@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 
 class SettingsScreen extends StatelessWidget {
-  const SettingsScreen(
-      {super.key, required this.handleThemeChange, required this.themeMode});
+  const SettingsScreen({super.key, required this.handleThemeChange, required this.themeMode});
 
   final void Function(ThemeMode) handleThemeChange;
   final ThemeMode themeMode;
@@ -23,35 +22,29 @@ class SettingsScreen extends StatelessWidget {
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 16),
-            RadioListTile<ThemeMode>(
-              title: const Text('System Default'),
-              value: ThemeMode.system,
+            RadioGroup(
               groupValue: themeMode,
               onChanged: (ThemeMode? value) {
                 if (value != null) {
                   handleThemeChange(value);
                 }
               },
-            ),
-            RadioListTile<ThemeMode>(
-              title: const Text('Light'),
-              value: ThemeMode.light,
-              groupValue: themeMode,
-              onChanged: (ThemeMode? value) {
-                if (value != null) {
-                  handleThemeChange(value);
-                }
-              },
-            ),
-            RadioListTile<ThemeMode>(
-              title: const Text('Dark'),
-              value: ThemeMode.dark,
-              groupValue: themeMode,
-              onChanged: (ThemeMode? value) {
-                if (value != null) {
-                  handleThemeChange(value);
-                }
-              },
+              child: Column(
+                children: [
+                  RadioListTile<ThemeMode>(
+                    title: const Text('System Default'),
+                    value: ThemeMode.system,
+                  ),
+                  RadioListTile<ThemeMode>(
+                    title: const Text('Light'),
+                    value: ThemeMode.light,
+                  ),
+                  RadioListTile<ThemeMode>(
+                    title: const Text('Dark'),
+                    value: ThemeMode.dark,
+                  ),
+                ],
+              ),
             ),
           ],
         ),
