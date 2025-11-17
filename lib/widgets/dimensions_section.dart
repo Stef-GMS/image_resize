@@ -77,12 +77,28 @@ class DimensionsSection extends StatelessWidget {
               onChanged: onUnitChanged,
             ),
             const SizedBox(height: 16),
-            _buildTextFieldRow(
-              theme: theme,
-              label: 'Height',
-              controller: heightController,
-              focusNode: heightFocusNode,
-              unit: unitMap[dimensionType]!,
+            Row(
+              children: [
+                Expanded(
+                  child: TextFieldRow(
+                    theme: theme,
+                    label: 'Width',
+                    controller: widthController,
+                    focusNode: widthFocusNode,
+                    unit: unitMap[dimensionType]!,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: TextFieldRow(
+                    theme: theme,
+                    label: 'Height',
+                    controller: heightController,
+                    focusNode: heightFocusNode,
+                    unit: unitMap[dimensionType]!,
+                  ),
+                ),
+              ],
             ),
           ],
         ),
