@@ -7,6 +7,8 @@ import 'package:image/image.dart' as img;
 import 'package:image_picker/image_picker.dart';
 import 'package:image_resize/screens/settings_screen.dart';
 import 'package:image_resize/widgets/dimensions_section.dart';
+import 'package:image_resize/widgets/dropdown_row.dart';
+import 'package:image_resize/widgets/text_field_row.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -600,19 +602,19 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
       title: 'Output',
       child: Column(
         children: [
-          _buildTextFieldRow(
+          TextFieldRow(
             theme: theme,
             label: 'File Suffix',
             controller: _suffixController,
             placeholder: 'e.g., _resized',
           ),
           const SizedBox(height: 16),
-          _buildDropdownRow(
-            theme,
-            'Output Format',
-            _outputFormat,
-            ['Same as Original', 'jpg', 'png'],
-            (value) {
+          DropdownRow(
+            theme: theme,
+            label: 'Output Format',
+            value: _outputFormat,
+            items: ['Same as Original', 'jpg', 'png'],
+            onChanged: (value) {
               setState(() {
                 _outputFormat = value!;
               });
@@ -732,97 +734,6 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
           borderRadius: BorderRadius.circular(999),
         ),
       ),
-    );
-  }
-
-  Widget _buildDropdownRow(
-    ThemeData theme,
-    String label,
-    String value,
-    List<String> items,
-    ValueChanged<String?> onChanged,
-  ) {
-    return Row(
-      children: [
-        SizedBox(
-          width: 80,
-          child: Text(
-            label,
-            style: theme.textTheme.bodyMedium,
-          ),
-        ),
-        Expanded(
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12.0),
-            decoration: BoxDecoration(
-              color: theme.inputDecorationTheme.fillColor,
-              borderRadius: BorderRadius.circular(12.0),
-            ),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<String>(
-                value: value,
-                isExpanded: true,
-                items: items.map<DropdownMenuItem<String>>((String value) {
-                  return DropdownMenuItem<String>(
-                    value: value,
-                    child: Text(value),
-                  );
-                }).toList(),
-                onChanged: onChanged,
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildTextFieldRow({
-    required ThemeData theme,
-    required String label,
-    required TextEditingController controller,
-    FocusNode? focusNode,
-    String? placeholder,
-    String? unit,
-  }) {
-    return Row(
-      children: [
-        SizedBox(
-          width: 80,
-          child: Text(
-            label,
-            style: theme.textTheme.bodyMedium,
-          ),
-        ),
-        Expanded(
-          child: TextField(
-            controller: controller,
-            focusNode: focusNode,
-            keyboardType: TextInputType.number,
-            decoration: InputDecoration(
-              hintText: placeholder,
-              isDense: true,
-              filled: true,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12.0),
-                borderSide: BorderSide.none,
-              ),
-            ),
-          ),
-        ),
-        if (unit != null) ...[
-          const SizedBox(width: 8),
-          SizedBox(
-            width: 30,
-            child: Text(
-              unit,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.textTheme.bodySmall?.color,
-              ),
-            ),
-          ),
-        ],
-      ],
     );
   }
 

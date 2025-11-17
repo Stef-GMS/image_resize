@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:image_resize/widgets/dropdown_row.dart';
+import 'package:image_resize/widgets/text_field_row.dart';
 
 class DimensionsSection extends StatelessWidget {
   final ThemeData theme;
@@ -67,20 +69,12 @@ class DimensionsSection extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 16),
-            _buildDropdownRow(
-              theme,
-              'Units',
-              dimensionType,
-              unitMap.keys.toList(),
-              onUnitChanged,
-            ),
-            const SizedBox(height: 16),
-            _buildTextFieldRow(
+            DropdownRow(
               theme: theme,
-              label: 'Width',
-              controller: widthController,
-              focusNode: widthFocusNode,
-              unit: unitMap[dimensionType]!,
+              label: 'Units',
+              value: dimensionType,
+              items: unitMap.keys.toList(),
+              onChanged: onUnitChanged,
             ),
             const SizedBox(height: 16),
             _buildTextFieldRow(
@@ -93,92 +87,6 @@ class DimensionsSection extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildDropdownRow(ThemeData theme, String label, String value,
-      List<String> items, ValueChanged<String?> onChanged) {
-    return Row(
-      children: [
-        SizedBox(
-          width: 80,
-          child: Text(
-            label,
-            style: theme.textTheme.bodyMedium,
-          ),
-        ),
-        Expanded(
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12.0),
-            decoration: BoxDecoration(
-              color: theme.inputDecorationTheme.fillColor,
-              borderRadius: BorderRadius.circular(12.0),
-            ),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<String>(
-                value: value,
-                isExpanded: true,
-                items: items.map<DropdownMenuItem<String>>((String value) {
-                  return DropdownMenuItem<String>(
-                    value: value,
-                    child: Text(value),
-                  );
-                }).toList(),
-                onChanged: onChanged,
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildTextFieldRow({
-    required ThemeData theme,
-    required String label,
-    required TextEditingController controller,
-    FocusNode? focusNode,
-    String? placeholder,
-    String? unit,
-  }) {
-    return Row(
-      children: [
-        SizedBox(
-          width: 80,
-          child: Text(
-            label,
-            style: theme.textTheme.bodyMedium,
-          ),
-        ),
-        Expanded(
-          child: TextField(
-            controller: controller,
-            focusNode: focusNode,
-            keyboardType: TextInputType.number,
-            decoration: InputDecoration(
-              hintText: placeholder,
-              isDense: true,
-              filled: true,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12.0),
-                borderSide: BorderSide.none,
-              ),
-            ),
-          ),
-        ),
-        if (unit != null) ...[
-          const SizedBox(width: 8),
-          SizedBox(
-            width: 30,
-            child: Text(
-              unit,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.textTheme.bodySmall?.color,
-              ),
-            ),
-          ),
-        ],
-      ],
     );
   }
 }
