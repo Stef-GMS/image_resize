@@ -1,15 +1,14 @@
 import 'dart:io';
 
+import 'package:exif/exif.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
 import 'package:image_picker/image_picker.dart';
-import 'package:exif/exif.dart';
+import 'package:image_resize/screens/settings_screen.dart';
+import 'package:image_resize/widgets/dimensions_section.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
-
-import '../screens/settings_screen.dart';
-import '../widgets/dimensions_section.dart';
 
 class ImageResizeScreen extends StatefulWidget {
   const ImageResizeScreen(
