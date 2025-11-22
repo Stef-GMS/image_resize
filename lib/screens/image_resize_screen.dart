@@ -13,7 +13,11 @@ import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 class ImageResizeScreen extends StatefulWidget {
-  const ImageResizeScreen({super.key, required this.handleThemeChange, required this.themeMode});
+  const ImageResizeScreen({
+    super.key,
+    required this.handleThemeChange,
+    required this.themeMode,
+  });
 
   final void Function(ThemeMode) handleThemeChange;
   final ThemeMode themeMode;
@@ -26,18 +30,24 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
   String? _saveDirectory;
 
   final List<File> _selectedImages = [];
+
   final _widthController = TextEditingController();
   final _heightController = TextEditingController();
   final _suffixController = TextEditingController();
+
   bool _scaleProportionally = true;
   bool _resampleImage = true;
   bool _maintainAspectRatio = true;
   double? _aspectRatio;
+
   img.Image? _firstImage;
+
   bool _overwriteAll = false;
   bool _userEditedSuffix = false;
   bool _includeExif = true;
+
   String _outputFormat = 'Same as Original';
+
   int _dpi = 72;
 
   final _widthFocusNode = FocusNode();
@@ -46,10 +56,9 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
   @override
   void initState() {
     super.initState();
+
     _widthFocusNode.addListener(_onWidthFocusChange);
     _heightFocusNode.addListener(_onHeightFocusChange);
-    _widthController.addListener(_updateSuffix);
-    _heightController.addListener(_updateSuffix);
     _suffixController.addListener(() {
       _userEditedSuffix = true;
     });
@@ -59,11 +68,14 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
   void dispose() {
     _widthFocusNode.removeListener(_onWidthFocusChange);
     _heightFocusNode.removeListener(_onHeightFocusChange);
+
     _widthController.dispose();
     _heightController.dispose();
     _suffixController.dispose();
+
     _widthFocusNode.dispose();
     _heightFocusNode.dispose();
+
     super.dispose();
   }
 
@@ -78,6 +90,10 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
         _heightController.text = height.toString();
       }
     }
+
+    if (!_widthFocusNode.hasFocus) {
+      _updateSuffix();
+    }
   }
 
   void _onHeightFocusChange() {
@@ -86,19 +102,26 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
         _aspectRatio != null &&
         _heightController.text.isNotEmpty) {
       final height = double.tryParse(_heightController.text);
+
       if (height != null) {
         final width = (height * _aspectRatio!).round();
         _widthController.text = width.toString();
       }
+    }
+
+    if (!_heightFocusNode.hasFocus) {
+      _updateSuffix();
     }
   }
 
   Future<void> _pickImages() async {
     final imagePicker = ImagePicker();
     final pickedFiles = await imagePicker.pickMultiImage();
+
     if (pickedFiles.isNotEmpty) {
       final firstImageFile = File(pickedFiles.first.path);
       final fileBytes = await firstImageFile.readAsBytes();
+
       final image = img.decodeImage(fileBytes);
       final exifData = await readExifFromBytes(fileBytes);
 
@@ -106,14 +129,19 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
         setState(() {
           _firstImage = image;
           _aspectRatio = image.width / image.height;
+          print(' _aspectRatio: $_aspectRatio');
           final xResolution = exifData['Image XResolution'];
+
           if (xResolution != null) {
+            print("dpi: ${xResolution.values.firstAsInt()}");
             _dpi = xResolution.values.firstAsInt();
           } else {
             _dpi = 72;
           }
+
           _widthController.text = image.width.toString();
           _heightController.text = image.height.toString();
+
           _userEditedSuffix = false;
           _updateSuffix();
         });
@@ -132,6 +160,7 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
       _saveDirectory = null;
       _aspectRatio = null;
       _firstImage = null;
+
       _widthController.clear();
       _heightController.clear();
       _suffixController.clear();
@@ -144,6 +173,7 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
 
     final widthInput = double.tryParse(_widthController.text) ?? 0;
     final heightInput = double.tryParse(_heightController.text) ?? 0;
+
     const resolution = 72;
 
     switch (_dimensionType) {
@@ -153,7 +183,10 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
           (_firstImage!.height * heightInput / 100).round(),
         );
       case 'inches':
-        return ((widthInput * resolution).round(), (heightInput * resolution).round());
+        return (
+          (widthInput * resolution).round(),
+          (heightInput * resolution).round(),
+        );
       case 'cm':
         return (
           (widthInput * resolution / 2.54).round(),
@@ -166,15 +199,32 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
         );
       case 'pixels':
       default:
-        return (widthInput.round(), heightInput.round());
+        return (
+          widthInput.round(),
+          heightInput.round(),
+        );
     }
   }
 
   void _updateSuffix() {
     if (!_userEditedSuffix) {
       final (width, height) = _calculatePixelDimensions();
+
       if (width > 0 && height > 0) {
+        // Only update suffix with entered values if dimensionType is pixels
+        // Otherwise, it should reflect the calculated pixel dimensions
+        // if (_dimensionType == 'pixels') {
+        //   _suffixController.text = '_${_widthController.text}x${_heightController.text}_$_dpi';
+        // } else {
         _suffixController.text = '_${width}x${height}_$_dpi';
+        // }
+        print(
+          'dimensionType: $_dimensionType, '
+          'width: ${_widthController.text}, '
+          'height: ${_heightController.text}, '
+          'original: ${_firstImage?.width}x${_firstImage?.height}, '
+          'calculated: ${width}x${height}',
+        );
       } else {
         _suffixController.text = '';
       }
@@ -185,7 +235,14 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
     final result = await FilePicker.platform.pickFiles(
       allowMultiple: true,
       type: FileType.custom,
-      allowedExtensions: ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'],
+      allowedExtensions: [
+        'jpg',
+        'jpeg',
+        'png',
+        'gif',
+        'bmp',
+        'webp',
+      ],
     );
     if (result != null && result.files.isNotEmpty) {
       final firstImageFile = File(result.files.first.path!);
@@ -368,7 +425,12 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
     return null;
   }
 
-  String _getNewFileName(String oldPath, int width, int height, String suffix) {
+  String _getNewFileName(
+    String oldPath,
+    int width,
+    int height,
+    String suffix,
+  ) {
     final oldFileName = oldPath.split('/').last;
     final oldExtension = oldFileName.split('.').last;
     final oldNameWithoutExtension = oldFileName.substring(
@@ -382,6 +444,7 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
     } else {
       newExtension = _outputFormat.toLowerCase();
     }
+    print("New filename: $oldNameWithoutExtension$suffix.$newExtension'");
 
     return '$oldNameWithoutExtension$suffix.$newExtension';
   }
