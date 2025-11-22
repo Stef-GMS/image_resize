@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:exif/exif.dart';
 import 'package:file_picker/file_picker.dart';
@@ -355,6 +356,16 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
         );
         final newPath = '$savePath/$newFileName';
 
+        final parentDir = File(newPath).parent;
+        if (!await parentDir.exists()) {
+          try {
+            await parentDir.create(recursive: true);
+          } catch (e) {
+            _showSnackBar('Error: Could not create save directory: $e');
+            continue; // Skip this image if directory can't be created
+          }
+        }
+
         if (!_overwriteAll && await File(newPath).exists()) {
           if (!mounted) return;
           final result = await showDialog<int>(
@@ -387,6 +398,14 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
               _overwriteAll = true;
             });
           }
+          // If the file exists and we're overwriting (result == 1 or _overwriteAll is true)
+          // explicitly delete the old file first to avoid permission issues during overwrite.
+          try {
+            await File(newPath).delete();
+          } catch (e) {
+            _showSnackBar('Error: Could not delete existing file for overwrite: $e');
+            continue; // Skip this image if deletion fails
+          }
         }
 
         final image = img.decodeImage(await imageFile.readAsBytes());
@@ -407,10 +426,6 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
                 height: height,
                 interpolation: _resampleImage ? img.Interpolation.cubic : img.Interpolation.nearest,
               );
-
-        if (_includeExif) {
-          resizedImage.exif = image.exif;
-        }
 
         List<int> encodedImage;
         if (_outputFormat == 'jpg') {
@@ -436,11 +451,21 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
     if (Platform.isMacOS) {
       return true;
     }
-    var status = await Permission.photos.status;
-    if (status.isDenied) {
-      status = await Permission.photos.request();
+    if (Platform.isIOS) {
+      var status = await Permission.photos.status;
+      if (status.isDenied) {
+        status = await Permission.photos.request();
+      }
+      return status.isGranted;
+    } else if (Platform.isAndroid) {
+      var status = await Permission.storage.status;
+      if (status.isDenied) {
+        status = await Permission.storage.request();
+      }
+      return status.isGranted;
     }
-    return status.isGranted;
+    // Default for other platforms
+    return true;
   }
 
   Future<Directory?> _getDownloadsDirectory() async {
@@ -452,6 +477,17 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
       return getDownloadsDirectory();
     }
     return null;
+  }
+
+  Future<void> _selectSaveDirectory() async {
+    final result = await FilePicker.platform.getDirectoryPath(
+      initialDirectory: _saveDirectory,
+    );
+    if (result != null) {
+      setState(() {
+        _saveDirectory = result;
+      });
+    }
   }
 
   String _getNewFileName(
@@ -482,18 +518,6 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
-  Future<void> _selectSaveDirectory() async {
-    final result = await FilePicker.platform.getDirectoryPath(
-      initialDirectory: _saveDirectory,
-    );
-    if (result != null) {
-      setState(() {
-        _saveDirectory = result;
-      });
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDarkMode = theme.brightness == Brightness.dark;
