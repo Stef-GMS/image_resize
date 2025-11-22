@@ -34,6 +34,9 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
   final _widthController = TextEditingController();
   final _heightController = TextEditingController();
   final _suffixController = TextEditingController();
+  final _resolutionController = TextEditingController();
+
+  String _resolutionUnit = 'pixels/inch';
 
   bool _scaleProportionally = true;
   bool _resampleImage = true;
@@ -48,8 +51,6 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
 
   String _outputFormat = 'Same as Original';
 
-  int _dpi = 72;
-
   final _widthFocusNode = FocusNode();
   final _heightFocusNode = FocusNode();
 
@@ -59,9 +60,8 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
 
     _widthFocusNode.addListener(_onWidthFocusChange);
     _heightFocusNode.addListener(_onHeightFocusChange);
-    _suffixController.addListener(() {
-      _userEditedSuffix = true;
-    });
+    _suffixController.addListener(_handleUserSuffixEdit);
+    _resolutionController.addListener(_updateSuffix);
   }
 
   @override
@@ -71,12 +71,17 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
 
     _widthController.dispose();
     _heightController.dispose();
-    _suffixController.dispose();
+    _suffixController.removeListener(_handleUserSuffixEdit);
+    _resolutionController.dispose();
 
     _widthFocusNode.dispose();
     _heightFocusNode.dispose();
 
     super.dispose();
+  }
+
+  void _handleUserSuffixEdit() {
+    _userEditedSuffix = true;
   }
 
   void _onWidthFocusChange() {
@@ -92,7 +97,7 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
     }
 
     if (!_widthFocusNode.hasFocus) {
-      _updateSuffix();
+      Future.delayed(Duration.zero, _updateSuffix);
     }
   }
 
@@ -110,7 +115,7 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
     }
 
     if (!_heightFocusNode.hasFocus) {
-      _updateSuffix();
+      Future.delayed(Duration.zero, _updateSuffix);
     }
   }
 
@@ -132,12 +137,17 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
           print(' _aspectRatio: $_aspectRatio');
           final xResolution = exifData['Image XResolution'];
 
+          // Try to read the DPI from the image's EXIF metadata.
+          // The 'XResolution' tag stores the DPI.
           if (xResolution != null) {
             print("dpi: ${xResolution.values.firstAsInt()}");
-            _dpi = xResolution.values.firstAsInt();
+            // If found, update the _resolutionController with the value.
+            _resolutionController.text = xResolution.values.firstAsInt().toString();
           } else {
-            _dpi = 72;
+            // If no DPI information is in the EXIF data, fall back to a default of 72.
+            _resolutionController.text = '72';
           }
+          _resolutionUnit = 'pixels/inch';
 
           _widthController.text = image.width.toString();
           _heightController.text = image.height.toString();
@@ -168,13 +178,21 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
     });
   }
 
+  /// Calculates the target pixel dimensions based on the user's input and selected unit.
   (int, int) _calculatePixelDimensions() {
     if (_firstImage == null) return (0, 0);
 
     final widthInput = double.tryParse(_widthController.text) ?? 0;
     final heightInput = double.tryParse(_heightController.text) ?? 0;
 
-    const resolution = 72;
+    // Parse the resolution from the controller, defaulting to 72 if empty or invalid.
+    var resolution = double.tryParse(_resolutionController.text) ?? 72.0;
+
+    // If the unit is pixels/cm, convert the resolution to pixels/inch for
+    // consistent calculations, since 1 inch = 2.54 cm.
+    if (_resolutionUnit == 'pixels/cm') {
+      resolution = resolution * 2.54;
+    }
 
     switch (_dimensionType) {
       case 'percentage':
@@ -183,22 +201,26 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
           (_firstImage!.height * heightInput / 100).round(),
         );
       case 'inches':
+        // Convert inches to pixels using the dynamic resolution.
         return (
           (widthInput * resolution).round(),
           (heightInput * resolution).round(),
         );
       case 'cm':
+        // Convert centimeters to pixels. 1 inch = 2.54 cm.
         return (
           (widthInput * resolution / 2.54).round(),
           (heightInput * resolution / 2.54).round(),
         );
       case 'mm':
+        // Convert millimeters to pixels. 1 inch = 25.4 mm.
         return (
           (widthInput * resolution / 25.4).round(),
           (heightInput * resolution / 25.4).round(),
         );
       case 'pixels':
       default:
+        // For pixels, the input is used directly.
         return (
           widthInput.round(),
           heightInput.round(),
@@ -206,18 +228,19 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
     }
   }
 
+  /// Updates the filename suffix automatically based on the calculated dimensions.
+  /// This is skipped if the user has manually edited the suffix field.
   void _updateSuffix() {
     if (!_userEditedSuffix) {
+      // Get the target dimensions in pixels.
       final (width, height) = _calculatePixelDimensions();
+      final resolution = int.tryParse(_resolutionController.text) ?? 72;
 
       if (width > 0 && height > 0) {
-        // Only update suffix with entered values if dimensionType is pixels
-        // Otherwise, it should reflect the calculated pixel dimensions
-        // if (_dimensionType == 'pixels') {
-        //   _suffixController.text = '_${_widthController.text}x${_heightController.text}_$_dpi';
-        // } else {
-        _suffixController.text = '_${width}x${height}_$_dpi';
-        // }
+        // Construct the suffix string in the format _[width]x[height]_[dpi].
+        _suffixController.removeListener(_handleUserSuffixEdit);
+        _suffixController.text = '_${width}x${height}_$resolution';
+        _suffixController.addListener(_handleUserSuffixEdit);
         print(
           'dimensionType: $_dimensionType, '
           'width: ${_widthController.text}, '
@@ -226,7 +249,9 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
           'calculated: ${width}x${height}',
         );
       } else {
+        _suffixController.removeListener(_handleUserSuffixEdit);
         _suffixController.text = '';
+        _suffixController.addListener(_handleUserSuffixEdit);
       }
     }
   }
@@ -255,11 +280,15 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
           _firstImage = image;
           _aspectRatio = image.width / image.height;
           final xResolution = exifData['Image XResolution'];
+          // Try to read the DPI from the image's EXIF metadata.
+          // The 'XResolution' tag stores the DPI.
           if (xResolution != null) {
-            _dpi = xResolution.values.firstAsInt();
+            _resolutionController.text = xResolution.values.firstAsInt().toString();
           } else {
-            _dpi = 72;
+            // If no DPI information is in the EXIF data, fall back to a default of 72.
+            _resolutionController.text = '72';
           }
+          _resolutionUnit = 'pixels/inch';
           _widthController.text = image.width.toString();
           _heightController.text = image.height.toString();
           _userEditedSuffix = false;
@@ -502,6 +531,14 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
                       heightController: _heightController,
                       heightFocusNode: _heightFocusNode,
                       unitMap: _unitMap,
+                      resolutionController: _resolutionController,
+                      resolutionUnit: _resolutionUnit,
+                      onResolutionUnitChanged: (value) {
+                        setState(() {
+                          _resolutionUnit = value!;
+                          _updateSuffix();
+                        });
+                      },
                     ),
                     const SizedBox(height: 16),
                     _buildOptionsSection(theme),

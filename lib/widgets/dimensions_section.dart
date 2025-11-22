@@ -13,6 +13,9 @@ class DimensionsSection extends StatelessWidget {
   final TextEditingController heightController;
   final FocusNode heightFocusNode;
   final Map<String, String> unitMap;
+  final TextEditingController resolutionController;
+  final String resolutionUnit;
+  final ValueChanged<String?> onResolutionUnitChanged;
 
   const DimensionsSection({
     super.key,
@@ -26,6 +29,9 @@ class DimensionsSection extends StatelessWidget {
     required this.heightController,
     required this.heightFocusNode,
     required this.unitMap,
+    required this.resolutionController,
+    required this.resolutionUnit,
+    required this.onResolutionUnitChanged,
   });
 
   @override
@@ -96,6 +102,28 @@ class DimensionsSection extends StatelessWidget {
                     controller: heightController,
                     focusNode: heightFocusNode,
                     unit: unitMap[dimensionType]!,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: TextFieldRow(
+                    theme: theme,
+                    label: 'Resolution',
+                    controller: resolutionController,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: DropdownRow(
+                    theme: theme,
+                    label: 'Resolution Unit',
+                    value: resolutionUnit,
+                    items: const ['pixels/inch', 'pixels/cm'],
+                    onChanged: onResolutionUnitChanged,
                   ),
                 ),
               ],
