@@ -140,6 +140,7 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
 
             if (xResolution != null) {
               _resolutionController.text = xResolution.toString().split('/').first;
+              print("dpi: $xResolution");
             } else {
               _resolutionController.text = '72';
             }
@@ -693,6 +694,314 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader(bool isDarkMode) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            'Image Resizer',
+            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: isDarkMode ? Colors.white : Colors.black,
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.settings_outlined),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => SettingsScreen(
+                    handleThemeChange: widget.handleThemeChange,
+                    themeMode: widget.themeMode,
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSourceSection(ThemeData theme) {
+    return _buildSectionCard(
+      title: 'Source',
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: _buildIconButton(
+                  theme: theme,
+                  icon: Icons.photo_library_outlined,
+                  label: 'Device',
+                  onPressed: _pickImages,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildIconButton(
+                  theme: theme,
+                  icon: Icons.cloud_upload_outlined,
+                  label: 'Cloud',
+                  onPressed: _pickFromCloud,
+                ),
+              ),
+            ],
+          ),
+          if (_selectedImages.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 100,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: _selectedImages.length,
+                itemBuilder: (context, index) {
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8.0),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8.0),
+                      child: Image.file(
+                        _selectedImages[index],
+                        width: 100,
+                        height: 100,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _clearImageSelections,
+                style: ElevatedButton.styleFrom(
+                  foregroundColor: theme.colorScheme.error,
+                  backgroundColor: theme.colorScheme.error.withValues(alpha: 0.1),
+                ),
+                child: const Text('Clear'),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOptionsSection(ThemeData theme) {
+    return _buildSectionCard(
+      title: 'Options',
+      child: Column(
+        children: [
+          _buildCheckboxRow(
+            label: 'Scale Proportionally',
+            value: _scaleProportionally,
+            onChanged: (value) {
+              setState(() {
+                _scaleProportionally = value!;
+              });
+            },
+          ),
+          const Divider(),
+          _buildCheckboxRow(
+            label: 'Resample Image',
+            value: _resampleImage,
+            onChanged: (value) {
+              setState(() {
+                _resampleImage = value!;
+              });
+            },
+          ),
+          const Divider(),
+          _buildCheckboxRow(
+            label: 'Include metadata (EXIF)',
+            value: _includeExif,
+            onChanged: (value) {
+              setState(() {
+                _includeExif = value!;
+              });
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOutputSection(ThemeData theme) {
+    return _buildSectionCard(
+      title: 'Output',
+      child: Column(
+        children: [
+          TextFieldRow(
+            theme: theme,
+            label: 'File Suffix',
+            controller: _suffixController,
+            placeholder: 'e.g., _resized',
+          ),
+          const SizedBox(height: 16),
+          DropdownRow(
+            theme: theme,
+            label: 'Output Format',
+            value: _outputFormat,
+            items: ['Same as Original', 'jpg', 'png'],
+            onChanged: (value) {
+              setState(() {
+                _outputFormat = value!;
+              });
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSaveLocationSection(ThemeData theme) {
+    return _buildSectionCard(
+      title: 'Save Location',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: _selectSaveDirectory,
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+              child: const Text('Choose Folder'),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 12.0),
+            decoration: BoxDecoration(
+              color: theme.inputDecorationTheme.fillColor,
+              borderRadius: BorderRadius.circular(12.0),
+            ),
+            child: Text(
+              _saveDirectory ?? 'No directory selected',
+              style: theme.textTheme.bodyMedium,
+              softWrap: true,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildResizeButton() {
+    return ElevatedButton(
+      onPressed: _selectedImages.isNotEmpty ? _resizeImages : null,
+      style: ElevatedButton.styleFrom(
+        foregroundColor: Colors.white,
+        backgroundColor: Theme.of(context).primaryColor,
+        minimumSize: const Size(double.infinity, 50),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(999),
+        ),
+        textStyle: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      child: const Text('Resize'),
+    );
+  }
+
+  Widget _buildSectionCard({
+    required String title,
+    required Widget child,
+    Widget? headerAccessory,
+  }) {
+    final theme = Theme.of(context);
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16.0),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  title,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: theme.textTheme.bodySmall?.color,
+                  ),
+                ),
+                if (headerAccessory != null) headerAccessory,
+              ],
+            ),
+            const SizedBox(height: 16),
+            child,
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildIconButton({
+    required ThemeData theme,
+    required IconData icon,
+    required String label,
+    required VoidCallback onPressed,
+  }) {
+    return ElevatedButton.icon(
+      onPressed: onPressed,
+      icon: Icon(icon, size: 16),
+      label: Text(label),
+      style: ElevatedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(999),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCheckboxRow({
+    required String label,
+    required bool value,
+    required ValueChanged<bool?> onChanged,
+  }) {
+    return InkWell(
+      onTap: () => onChanged(!value),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8.0),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              label,
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            SizedBox(
+              height: 20,
+              width: 20,
+              child: Checkbox(
+                value: value,
+                onChanged: onChanged,
+              ),
+            ),
+          ],
         ),
       ),
     );
