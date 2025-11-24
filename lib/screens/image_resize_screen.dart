@@ -1,7 +1,5 @@
 import 'dart:io';
-import 'dart:typed_data';
 
-import 'package:exif/exif.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
@@ -10,6 +8,7 @@ import 'package:image_resize/screens/settings_screen.dart';
 import 'package:image_resize/widgets/dimensions_section.dart';
 import 'package:image_resize/widgets/dropdown_row.dart';
 import 'package:image_resize/widgets/text_field_row.dart';
+import 'package:native_exif/native_exif.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -35,6 +34,9 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
   final _widthController = TextEditingController();
   final _heightController = TextEditingController();
   final _suffixController = TextEditingController();
+  final _resolutionController = TextEditingController();
+
+  String _resolutionUnit = 'pixels/inch';
 
   bool _scaleProportionally = true;
   bool _resampleImage = true;
@@ -49,8 +51,6 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
 
   String _outputFormat = 'Same as Original';
 
-  int _dpi = 72;
-
   final _widthFocusNode = FocusNode();
   final _heightFocusNode = FocusNode();
 
@@ -60,9 +60,8 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
 
     _widthFocusNode.addListener(_onWidthFocusChange);
     _heightFocusNode.addListener(_onHeightFocusChange);
-    _suffixController.addListener(() {
-      _userEditedSuffix = true;
-    });
+    _suffixController.addListener(_handleUserSuffixEdit);
+    _resolutionController.addListener(_updateSuffix);
   }
 
   @override
@@ -72,12 +71,17 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
 
     _widthController.dispose();
     _heightController.dispose();
-    _suffixController.dispose();
+    _suffixController.removeListener(_handleUserSuffixEdit);
+    _resolutionController.dispose();
 
     _widthFocusNode.dispose();
     _heightFocusNode.dispose();
 
     super.dispose();
+  }
+
+  void _handleUserSuffixEdit() {
+    _userEditedSuffix = true;
   }
 
   void _onWidthFocusChange() {
@@ -93,7 +97,7 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
     }
 
     if (!_widthFocusNode.hasFocus) {
-      _updateSuffix();
+      Future.delayed(Duration.zero, _updateSuffix);
     }
   }
 
@@ -111,7 +115,7 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
     }
 
     if (!_heightFocusNode.hasFocus) {
-      _updateSuffix();
+      Future.delayed(Duration.zero, _updateSuffix);
     }
   }
 
@@ -124,25 +128,32 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
       final fileBytes = await firstImageFile.readAsBytes();
 
       final image = img.decodeImage(fileBytes);
-      final exifData = await readExifFromBytes(fileBytes);
 
       if (image != null) {
+        try {
+          final exif = await Exif.fromPath(firstImageFile.path);
+          final xResolution = await exif.getAttribute('XResolution');
+          setState(() {
+            _firstImage = image;
+            _aspectRatio = image.width / image.height;
+            print(' _aspectRatio: $_aspectRatio');
+
+            if (xResolution != null) {
+              _resolutionController.text = xResolution.toString().split('/').first;
+            } else {
+              _resolutionController.text = '72';
+            }
+          });
+        } catch (e) {
+          print('Could not read EXIF data: $e');
+          setState(() {
+            _resolutionController.text = '72';
+          });
+        }
+
         setState(() {
-          _firstImage = image;
-          _aspectRatio = image.width / image.height;
-          print(' _aspectRatio: $_aspectRatio');
-          final xResolution = exifData['Image XResolution'];
-
-          if (xResolution != null) {
-            print("dpi: ${xResolution.values.firstAsInt()}");
-            _dpi = xResolution.values.firstAsInt();
-          } else {
-            _dpi = 72;
-          }
-
           _widthController.text = image.width.toString();
           _heightController.text = image.height.toString();
-
           _userEditedSuffix = false;
           _updateSuffix();
         });
@@ -169,13 +180,21 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
     });
   }
 
+  /// Calculates the target pixel dimensions based on the user's input and selected unit.
   (int, int) _calculatePixelDimensions() {
     if (_firstImage == null) return (0, 0);
 
     final widthInput = double.tryParse(_widthController.text) ?? 0;
     final heightInput = double.tryParse(_heightController.text) ?? 0;
 
-    const resolution = 72;
+    // Parse the resolution from the controller, defaulting to 72 if empty or invalid.
+    var resolution = double.tryParse(_resolutionController.text) ?? 72.0;
+
+    // If the unit is pixels/cm, convert the resolution to pixels/inch for
+    // consistent calculations, since 1 inch = 2.54 cm.
+    if (_resolutionUnit == 'pixels/cm') {
+      resolution = resolution * 2.54;
+    }
 
     switch (_dimensionType) {
       case 'percentage':
@@ -184,22 +203,26 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
           (_firstImage!.height * heightInput / 100).round(),
         );
       case 'inches':
+        // Convert inches to pixels using the dynamic resolution.
         return (
           (widthInput * resolution).round(),
           (heightInput * resolution).round(),
         );
       case 'cm':
+        // Convert centimeters to pixels. 1 inch = 2.54 cm.
         return (
           (widthInput * resolution / 2.54).round(),
           (heightInput * resolution / 2.54).round(),
         );
       case 'mm':
+        // Convert millimeters to pixels. 1 inch = 25.4 mm.
         return (
           (widthInput * resolution / 25.4).round(),
           (heightInput * resolution / 25.4).round(),
         );
       case 'pixels':
       default:
+        // For pixels, the input is used directly.
         return (
           widthInput.round(),
           heightInput.round(),
@@ -207,18 +230,19 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
     }
   }
 
+  /// Updates the filename suffix automatically based on the calculated dimensions.
+  /// This is skipped if the user has manually edited the suffix field.
   void _updateSuffix() {
     if (!_userEditedSuffix) {
+      // Get the target dimensions in pixels.
       final (width, height) = _calculatePixelDimensions();
+      final resolution = int.tryParse(_resolutionController.text) ?? 72;
 
       if (width > 0 && height > 0) {
-        // Only update suffix with entered values if dimensionType is pixels
-        // Otherwise, it should reflect the calculated pixel dimensions
-        // if (_dimensionType == 'pixels') {
-        //   _suffixController.text = '_${_widthController.text}x${_heightController.text}_$_dpi';
-        // } else {
-        _suffixController.text = '_${width}x${height}_$_dpi';
-        // }
+        // Construct the suffix string in the format _[width]x[height]_[dpi].
+        _suffixController.removeListener(_handleUserSuffixEdit);
+        _suffixController.text = '_${width}x${height}_$resolution';
+        _suffixController.addListener(_handleUserSuffixEdit);
         print(
           'dimensionType: $_dimensionType, '
           'width: ${_widthController.text}, '
@@ -227,7 +251,9 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
           'calculated: ${width}x${height}',
         );
       } else {
+        _suffixController.removeListener(_handleUserSuffixEdit);
         _suffixController.text = '';
+        _suffixController.addListener(_handleUserSuffixEdit);
       }
     }
   }
@@ -249,18 +275,29 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
       final firstImageFile = File(result.files.first.path!);
       final fileBytes = await firstImageFile.readAsBytes();
       final image = img.decodeImage(fileBytes);
-      final exifData = await readExifFromBytes(fileBytes);
 
       if (image != null) {
+        try {
+          final exif = await Exif.fromPath(firstImageFile.path);
+          final xResolution = await exif.getAttribute('XResolution');
+          setState(() {
+            _firstImage = image;
+            _aspectRatio = image.width / image.height;
+            if (xResolution != null) {
+              _resolutionController.text = xResolution.toString().split('/').first;
+            } else {
+              _resolutionController.text = '72';
+            }
+          });
+        } catch (e) {
+          print('Could not read EXIF data: $e');
+          setState(() {
+            _resolutionController.text = '72';
+          });
+        }
+
         setState(() {
-          _firstImage = image;
-          _aspectRatio = image.width / image.height;
-          final xResolution = exifData['Image XResolution'];
-          if (xResolution != null) {
-            _dpi = xResolution.values.firstAsInt();
-          } else {
-            _dpi = 72;
-          }
+          _resolutionUnit = 'pixels/inch';
           _widthController.text = image.width.toString();
           _heightController.text = image.height.toString();
           _userEditedSuffix = false;
@@ -302,20 +339,11 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
       return;
     }
 
-    var savePath = _saveDirectory;
-    if (savePath == null) {
-      final defaultDownloads = await _getDownloadsDirectory();
-      if (defaultDownloads != null) {
-        savePath = defaultDownloads.path;
-      } else {
-        await _selectSaveDirectory();
-        savePath = _saveDirectory;
-        if (savePath == null) {
-          _showSnackBar('Please select a save directory.');
-          return;
-        }
-      }
+    final bool canWrite = await _ensureSaveDirectoryIsWritable();
+    if (!canWrite) {
+      return; // Stop if we can't get a writable directory.
     }
+    final savePath = _saveDirectory!; // It's guaranteed to be non-null and writable here.
 
     if (await _requestPermission()) {
       for (final imageFile in _selectedImages) {
@@ -399,6 +427,7 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
               );
 
         List<int> encodedImage;
+
         if (_outputFormat == 'jpg') {
           encodedImage = img.encodeJpg(resizedImage);
         } else if (_outputFormat == 'png') {
@@ -413,9 +442,124 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
         }
 
         await File(newPath).writeAsBytes(encodedImage);
+
+        if (_includeExif) {
+          Exif? originalExif;
+          Exif? newExif;
+          try {
+            originalExif = await Exif.fromPath(imageFile.path);
+            final originalAttributes = await originalExif.getAttributes() ?? {};
+            
+            // Create a mutable copy of the attributes
+            final newAttributes = Map<String, Object>.from(originalAttributes);
+
+            final int newDpi = int.tryParse(_resolutionController.text) ?? 72;
+            final newDpiString = '$newDpi/1';
+
+            newAttributes['XResolution'] = newDpiString;
+            newAttributes['YResolution'] = newDpiString;
+            newAttributes['ResolutionUnit'] = '2'; // 2 = pixels per inch
+
+            newExif = await Exif.fromPath(newPath);
+            await newExif.writeAttributes(newAttributes);
+          } catch (e) {
+            print('Could not write EXIF data: $e');
+            _showSnackBar('Warning: Could not write metadata to $newFileName');
+          } finally {
+            await originalExif?.close();
+            await newExif?.close();
+          }
+        }
       }
       _showSnackBar('Images resized and saved to $savePath');
     }
+  }
+
+  Future<bool> _ensureSaveDirectoryIsWritable() async {
+    // If no directory is set (e.g., app just launched, or selections cleared),
+    // try to get the default downloads directory or prompt user.
+    if (_saveDirectory == null) {
+      final defaultDownloads = await _getDownloadsDirectory();
+      if (defaultDownloads != null) {
+        _saveDirectory = defaultDownloads.path;
+      } else {
+        // If default downloads directory is not available, prompt user to select one.
+        await _selectSaveDirectory();
+        if (_saveDirectory == null) {
+          // User cancelled selection
+          _showSnackBar('Image resizing cancelled: No save directory selected.');
+          return false;
+        }
+      }
+    }
+
+    bool isWritable = false;
+    while (!isWritable) {
+      // Create a temporary file path within the current _saveDirectory.
+      final tempFilePath =
+          '$_saveDirectory/.permission_check_${DateTime.now().microsecondsSinceEpoch}';
+      final tempFile = File(tempFilePath);
+
+      try {
+        // Attempt to create and then delete a temporary file to check write permissions.
+        if (!await tempFile.parent.exists()) {
+          await tempFile.parent.create(recursive: true);
+        }
+        await tempFile.writeAsString('permission test');
+        await tempFile.delete();
+        isWritable = true;
+      } on FileSystemException catch (e) {
+        // If an error occurs, it means the directory is not writable.
+        isWritable = false;
+        print('Permission check failed for $_saveDirectory: $e'); // Log the error
+
+        if (!mounted) return false; // Ensure widget is still mounted before showing dialog.
+
+        // Show a dialog to inform the user and prompt for a new directory.
+        final bool? shouldSelectNewDirectory = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Permission Denied'),
+            content: Text(
+              '\n\nThe app does not have permission to save files in the automatically selected directory:\n\n$_saveDirectory\n\nDue to security, you must choose a folder, even if the same folder.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false), // User cancels
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(true), // User chooses new folder
+                child: const Text('Choose Folder'),
+              ),
+            ],
+          ),
+        );
+
+        if (shouldSelectNewDirectory == true) {
+          // User chose to select a new directory.
+          await _selectSaveDirectory();
+          if (_saveDirectory == null) {
+            // User cancelled the directory picker after permission denied.
+            _showSnackBar('Image resizing cancelled: No writable save directory selected.');
+            return false;
+          }
+          // Loop will continue to re-check the newly selected _saveDirectory.
+        } else {
+          // User cancelled from the dialog.
+          _showSnackBar('Image resizing cancelled.');
+          return false;
+        }
+      } catch (e) {
+        // Catch any other unexpected errors during permission check.
+        print('Unexpected error during permission check: $e');
+        _showSnackBar(
+          'An unexpected error occurred during permission check. Image resizing cancelled.',
+        );
+        return false;
+      }
+    }
+    return true; // Directory is confirmed to be writable.
   }
 
   Future<bool> _requestPermission() async {
@@ -526,6 +670,14 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
                       heightController: _heightController,
                       heightFocusNode: _heightFocusNode,
                       unitMap: _unitMap,
+                      resolutionController: _resolutionController,
+                      resolutionUnit: _resolutionUnit,
+                      onResolutionUnitChanged: (value) {
+                        setState(() {
+                          _resolutionUnit = value!;
+                          _updateSuffix();
+                        });
+                      },
                     ),
                     const SizedBox(height: 16),
                     _buildOptionsSection(theme),
@@ -541,314 +693,6 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeader(bool isDarkMode) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 16.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            'Image Resizer',
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: isDarkMode ? Colors.white : Colors.black,
-            ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.settings_outlined),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => SettingsScreen(
-                    handleThemeChange: widget.handleThemeChange,
-                    themeMode: widget.themeMode,
-                  ),
-                ),
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSourceSection(ThemeData theme) {
-    return _buildSectionCard(
-      title: 'Source',
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: _buildIconButton(
-                  theme: theme,
-                  icon: Icons.photo_library_outlined,
-                  label: 'Device',
-                  onPressed: _pickImages,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildIconButton(
-                  theme: theme,
-                  icon: Icons.cloud_upload_outlined,
-                  label: 'Cloud',
-                  onPressed: _pickFromCloud,
-                ),
-              ),
-            ],
-          ),
-          if (_selectedImages.isNotEmpty) ...[
-            const SizedBox(height: 16),
-            SizedBox(
-              height: 100,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                itemCount: _selectedImages.length,
-                itemBuilder: (context, index) {
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 8.0),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(8.0),
-                      child: Image.file(
-                        _selectedImages[index],
-                        width: 100,
-                        height: 100,
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _clearImageSelections,
-                style: ElevatedButton.styleFrom(
-                  foregroundColor: theme.colorScheme.error,
-                  backgroundColor: theme.colorScheme.error.withValues(alpha: 0.1),
-                ),
-                child: const Text('Clear'),
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildOptionsSection(ThemeData theme) {
-    return _buildSectionCard(
-      title: 'Options',
-      child: Column(
-        children: [
-          _buildCheckboxRow(
-            label: 'Scale Proportionally',
-            value: _scaleProportionally,
-            onChanged: (value) {
-              setState(() {
-                _scaleProportionally = value!;
-              });
-            },
-          ),
-          const Divider(),
-          _buildCheckboxRow(
-            label: 'Resample Image',
-            value: _resampleImage,
-            onChanged: (value) {
-              setState(() {
-                _resampleImage = value!;
-              });
-            },
-          ),
-          const Divider(),
-          _buildCheckboxRow(
-            label: 'Include metadata (EXIF)',
-            value: _includeExif,
-            onChanged: (value) {
-              setState(() {
-                _includeExif = value!;
-              });
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildOutputSection(ThemeData theme) {
-    return _buildSectionCard(
-      title: 'Output',
-      child: Column(
-        children: [
-          TextFieldRow(
-            theme: theme,
-            label: 'File Suffix',
-            controller: _suffixController,
-            placeholder: 'e.g., _resized',
-          ),
-          const SizedBox(height: 16),
-          DropdownRow(
-            theme: theme,
-            label: 'Output Format',
-            value: _outputFormat,
-            items: ['Same as Original', 'jpg', 'png'],
-            onChanged: (value) {
-              setState(() {
-                _outputFormat = value!;
-              });
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSaveLocationSection(ThemeData theme) {
-    return _buildSectionCard(
-      title: 'Save Location',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: _selectSaveDirectory,
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(999),
-                ),
-              ),
-              child: const Text('Choose Folder'),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 12.0),
-            decoration: BoxDecoration(
-              color: theme.inputDecorationTheme.fillColor,
-              borderRadius: BorderRadius.circular(12.0),
-            ),
-            child: Text(
-              _saveDirectory ?? 'No directory selected',
-              style: theme.textTheme.bodyMedium,
-              softWrap: true,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildResizeButton() {
-    return ElevatedButton(
-      onPressed: _selectedImages.isNotEmpty ? _resizeImages : null,
-      style: ElevatedButton.styleFrom(
-        foregroundColor: Colors.white,
-        backgroundColor: Theme.of(context).primaryColor,
-        minimumSize: const Size(double.infinity, 50),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(999),
-        ),
-        textStyle: const TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-      child: const Text('Resize'),
-    );
-  }
-
-  Widget _buildSectionCard({
-    required String title,
-    required Widget child,
-    Widget? headerAccessory,
-  }) {
-    final theme = Theme.of(context);
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16.0),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  title,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    color: theme.textTheme.bodySmall?.color,
-                  ),
-                ),
-                if (headerAccessory != null) headerAccessory,
-              ],
-            ),
-            const SizedBox(height: 16),
-            child,
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildIconButton({
-    required ThemeData theme,
-    required IconData icon,
-    required String label,
-    required VoidCallback onPressed,
-  }) {
-    return ElevatedButton.icon(
-      onPressed: onPressed,
-      icon: Icon(icon, size: 16),
-      label: Text(label),
-      style: ElevatedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(999),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCheckboxRow({
-    required String label,
-    required bool value,
-    required ValueChanged<bool?> onChanged,
-  }) {
-    return InkWell(
-      onTap: () => onChanged(!value),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8.0),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              label,
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-            SizedBox(
-              height: 20,
-              width: 20,
-              child: Checkbox(
-                value: value,
-                onChanged: onChanged,
-              ),
-            ),
-          ],
         ),
       ),
     );
