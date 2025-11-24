@@ -3,12 +3,12 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
+import 'package:image/src/util/rational.dart'; // For Rational class
 import 'package:image_picker/image_picker.dart';
 import 'package:image_resize/screens/settings_screen.dart';
 import 'package:image_resize/widgets/dimensions_section.dart';
 import 'package:image_resize/widgets/dropdown_row.dart';
 import 'package:image_resize/widgets/text_field_row.dart';
-import 'package:native_exif/native_exif.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -130,31 +130,30 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
       final image = img.decodeImage(fileBytes);
 
       if (image != null) {
-        try {
-          final exif = await Exif.fromPath(firstImageFile.path);
-          final xResolution = await exif.getAttribute('XResolution');
-          setState(() {
-            _firstImage = image;
-            _aspectRatio = image.width / image.height;
-            print(' _aspectRatio: $_aspectRatio');
+        setState(() {
+          _firstImage = image;
+          _aspectRatio = image.width / image.height;
+          print(' _aspectRatio: $_aspectRatio');
 
-            if (xResolution != null) {
-              _resolutionController.text = xResolution.toString().split('/').first;
-              print("dpi: $xResolution");
+          final imageIfd = image.exif.imageIfd;
+          if (imageIfd != null) {
+            const xResolutionTag = 282;
+            final xResolutionValue = imageIfd[xResolutionTag];
+
+            if (xResolutionValue is List<Rational> && xResolutionValue.isNotEmpty) {
+              _resolutionController.text = xResolutionValue[0].numerator.toString();
+              print("dpi: ${xResolutionValue[0].numerator}");
             } else {
               _resolutionController.text = '72';
             }
-          });
-        } catch (e) {
-          print('Could not read EXIF data: $e');
-          setState(() {
+          } else {
             _resolutionController.text = '72';
-          });
-        }
+          }
+          _resolutionUnit = 'pixels/inch';
 
-        setState(() {
           _widthController.text = image.width.toString();
           _heightController.text = image.height.toString();
+
           _userEditedSuffix = false;
           _updateSuffix();
         });
@@ -278,26 +277,23 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
       final image = img.decodeImage(fileBytes);
 
       if (image != null) {
-        try {
-          final exif = await Exif.fromPath(firstImageFile.path);
-          final xResolution = await exif.getAttribute('XResolution');
-          setState(() {
-            _firstImage = image;
-            _aspectRatio = image.width / image.height;
-            if (xResolution != null) {
-              _resolutionController.text = xResolution.toString().split('/').first;
+        setState(() {
+          _firstImage = image;
+          _aspectRatio = image.width / image.height;
+
+          final imageIfd = image.exif.imageIfd;
+          if (imageIfd != null) {
+            const xResolutionTag = 282;
+            final xResolutionValue = imageIfd[xResolutionTag];
+
+            if (xResolutionValue is List<Rational> && xResolutionValue.isNotEmpty) {
+              _resolutionController.text = xResolutionValue[0].numerator.toString();
             } else {
               _resolutionController.text = '72';
             }
-          });
-        } catch (e) {
-          print('Could not read EXIF data: $e');
-          setState(() {
+          } else {
             _resolutionController.text = '72';
-          });
-        }
-
-        setState(() {
+          }
           _resolutionUnit = 'pixels/inch';
           _widthController.text = image.width.toString();
           _heightController.text = image.height.toString();
@@ -443,34 +439,6 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
         }
 
         await File(newPath).writeAsBytes(encodedImage);
-
-        if (_includeExif) {
-          Exif? originalExif;
-          Exif? newExif;
-          try {
-            originalExif = await Exif.fromPath(imageFile.path);
-            final originalAttributes = await originalExif.getAttributes() ?? {};
-            
-            // Create a mutable copy of the attributes
-            final newAttributes = Map<String, Object>.from(originalAttributes);
-
-            final int newDpi = int.tryParse(_resolutionController.text) ?? 72;
-            final newDpiString = '$newDpi/1';
-
-            newAttributes['XResolution'] = newDpiString;
-            newAttributes['YResolution'] = newDpiString;
-            newAttributes['ResolutionUnit'] = '2'; // 2 = pixels per inch
-
-            newExif = await Exif.fromPath(newPath);
-            await newExif.writeAttributes(newAttributes);
-          } catch (e) {
-            print('Could not write EXIF data: $e');
-            _showSnackBar('Warning: Could not write metadata to $newFileName');
-          } finally {
-            await originalExif?.close();
-            await newExif?.close();
-          }
-        }
       }
       _showSnackBar('Images resized and saved to $savePath');
     }
