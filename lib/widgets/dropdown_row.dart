@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
-class DropdownRow extends StatelessWidget {
+class DropdownRow<T> extends StatelessWidget {
   final ThemeData theme;
   final String label;
-  final String value;
-  final List<String> items;
-  final ValueChanged<String?> onChanged;
+  final T value;
+  final List<T> items;
+  final ValueChanged<T?> onChanged;
 
   const DropdownRow({
     super.key,
@@ -35,13 +35,13 @@ class DropdownRow extends StatelessWidget {
               borderRadius: BorderRadius.circular(12.0),
             ),
             child: DropdownButtonHideUnderline(
-              child: DropdownButton<String>(
+              child: DropdownButton<T>(
                 value: value,
                 isExpanded: true,
-                items: items.map<DropdownMenuItem<String>>((String value) {
-                  return DropdownMenuItem<String>(
+                items: items.map<DropdownMenuItem<T>>((T value) {
+                  return DropdownMenuItem<T>(
                     value: value,
-                    child: Text(value),
+                    child: Text(value is Enum ? value.name : value.toString()),
                   );
                 }).toList(),
                 onChanged: onChanged,

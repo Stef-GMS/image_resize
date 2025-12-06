@@ -1,7 +1,5 @@
 import 'dart:io';
-import 'dart:typed_data';
 
-import 'package:exif/exif.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
@@ -12,6 +10,15 @@ import 'package:image_resize/widgets/dropdown_row.dart';
 import 'package:image_resize/widgets/text_field_row.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
+
+final tagXResolution = img.exifTagNameToID['XResolution']!;
+final tagYResolution = img.exifTagNameToID['YResolution']!;
+
+enum ImageResizeOutputFormat {
+  sameAsOriginal,
+  jpg,
+  png,
+}
 
 class ImageResizeScreen extends StatefulWidget {
   const ImageResizeScreen({
@@ -50,7 +57,7 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
   bool _userEditedSuffix = false;
   bool _includeExif = true;
 
-  String _outputFormat = 'Same as Original';
+  var _outputFormat = ImageResizeOutputFormat.sameAsOriginal;
 
   final _widthFocusNode = FocusNode();
   final _heightFocusNode = FocusNode();
@@ -129,21 +136,23 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
       final fileBytes = await firstImageFile.readAsBytes();
 
       final image = img.decodeImage(fileBytes);
-      final exifData = await readExifFromBytes(fileBytes);
 
       if (image != null) {
         setState(() {
           _firstImage = image;
           _aspectRatio = image.width / image.height;
           print(' _aspectRatio: $_aspectRatio');
-          final xResolution = exifData['Image XResolution'];
-
+          // The image package automatically parses EXIF data. We can access it
+          // from the decoded image object.
+          final exifData = image.exif;
           // Try to read the DPI from the image's EXIF metadata.
           // The 'XResolution' tag stores the DPI.
+          final xResolution = exifData.getTag(tagXResolution);
+
           if (xResolution != null) {
-            print("dpi: ${xResolution.values.firstAsInt()}");
+            print('dpi: ${xResolution.toInt()}');
             // If found, update the _resolutionController with the value.
-            _resolutionController.text = xResolution.values.firstAsInt().toString();
+            _resolutionController.text = xResolution.toInt().toString();
           } else {
             // If no DPI information is in the EXIF data, fall back to a default of 72.
             _resolutionController.text = '72';
@@ -247,7 +256,7 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
           'width: ${_widthController.text}, '
           'height: ${_heightController.text}, '
           'original: ${_firstImage?.width}x${_firstImage?.height}, '
-          'calculated: ${width}x${height}',
+          'calculated: ${width}x$height',
         );
       } else {
         _suffixController.removeListener(_handleUserSuffixEdit);
@@ -274,17 +283,19 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
       final firstImageFile = File(result.files.first.path!);
       final fileBytes = await firstImageFile.readAsBytes();
       final image = img.decodeImage(fileBytes);
-      final exifData = await readExifFromBytes(fileBytes);
 
       if (image != null) {
         setState(() {
           _firstImage = image;
           _aspectRatio = image.width / image.height;
-          final xResolution = exifData['Image XResolution'];
+          // The image package automatically parses EXIF data. We can access it
+          // from the decoded image object.
+          final exifData = image.exif;
           // Try to read the DPI from the image's EXIF metadata.
           // The 'XResolution' tag stores the DPI.
+          final xResolution = exifData.getTag(tagXResolution);
           if (xResolution != null) {
-            _resolutionController.text = xResolution.values.firstAsInt().toString();
+            _resolutionController.text = xResolution.toInt().toString();
           } else {
             // If no DPI information is in the EXIF data, fall back to a default of 72.
             _resolutionController.text = '72';
@@ -427,18 +438,29 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
                 interpolation: _resampleImage ? img.Interpolation.cubic : img.Interpolation.nearest,
               );
 
+        // Get the resolution from the text controller.
+        final resolution = int.tryParse(_resolutionController.text) ?? 72;
+
+        // Create a new EXIF data object.
+        final exif = image.exif;
+        exif.imageIfd[tagXResolution] = img.IfdValueRational(resolution, 1);
+        exif.imageIfd[tagYResolution] = img.IfdValueRational(resolution, 1);
+        resizedImage.exif = exif;
+
         List<int> encodedImage;
-        if (_outputFormat == 'jpg') {
+        final outputFormat = switch (_outputFormat) {
+          ImageResizeOutputFormat.sameAsOriginal =>
+            imageFile.path.split('.').last.toLowerCase() == 'png' ? 'png' : 'jpg',
+          ImageResizeOutputFormat value => value.name,
+        };
+        if (outputFormat == 'jpg') {
           encodedImage = img.encodeJpg(resizedImage);
-        } else if (_outputFormat == 'png') {
-          encodedImage = img.encodePng(resizedImage);
         } else {
-          final oldExtension = imageFile.path.split('.').last.toLowerCase();
-          if (oldExtension == 'png') {
-            encodedImage = img.encodePng(resizedImage);
-          } else {
-            encodedImage = img.encodeJpg(resizedImage);
-          }
+          encodedImage = img.PngEncoder(
+            filter: img.PngFilter.paeth,
+            level: 6,
+            pixelDimensions: img.PngPhysicalPixelDimensions.dpi(resolution),
+          ).encode(image);
         }
 
         await File(newPath).writeAsBytes(encodedImage);
@@ -504,10 +526,10 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
     );
 
     String newExtension;
-    if (_outputFormat == 'Same as Original') {
+    if (_outputFormat == ImageResizeOutputFormat.sameAsOriginal) {
       newExtension = oldExtension.toLowerCase();
     } else {
-      newExtension = _outputFormat.toLowerCase();
+      newExtension = _outputFormat.name;
     }
     print("New filename: $oldNameWithoutExtension$suffix.$newExtension'");
 
@@ -518,6 +540,7 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDarkMode = theme.brightness == Brightness.dark;
@@ -733,11 +756,11 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
             placeholder: 'e.g., _resized',
           ),
           const SizedBox(height: 16),
-          DropdownRow(
+          DropdownRow<ImageResizeOutputFormat>(
             theme: theme,
             label: 'Output Format',
             value: _outputFormat,
-            items: ['Same as Original', 'jpg', 'png'],
+            items: ImageResizeOutputFormat.values,
             onChanged: (value) {
               setState(() {
                 _outputFormat = value!;
