@@ -2,21 +2,48 @@ import 'package:flutter/material.dart';
 import 'package:image_resize/widgets/dropdown_row.dart';
 import 'package:image_resize/widgets/text_field_row.dart';
 
+/// A widget that displays the dimensions section of the screen.
 class DimensionsSection extends StatelessWidget {
+  /// The theme data.
   final ThemeData theme;
+
+  /// Whether to maintain the aspect ratio of the image.
   final bool maintainAspectRatio;
+
+  /// A callback to handle aspect ratio changes.
   final ValueChanged<bool?> onAspectRatioChanged;
+
+  /// The type of dimension to use for resizing.
   final String dimensionType;
+
+  /// A callback to handle unit changes.
   final ValueChanged<String?> onUnitChanged;
+
+  /// The controller for the width text field.
   final TextEditingController widthController;
+
+  /// The focus node for the width text field.
   final FocusNode widthFocusNode;
+
+  /// The controller for the height text field.
   final TextEditingController heightController;
+
+  /// The focus node for the height text field.
   final FocusNode heightFocusNode;
+
+  /// A map of dimension units.
   final Map<String, String> unitMap;
+
+  /// The controller for the resolution text field.
   final TextEditingController resolutionController;
+
+  /// The unit for the resolution.
   final String resolutionUnit;
+
+  /// A callback to handle resolution unit changes.
   final ValueChanged<String?> onResolutionUnitChanged;
 
+  /// Creates a [DimensionsSection] widget.
   const DimensionsSection({
     super.key,
     required this.theme,

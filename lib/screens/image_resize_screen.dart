@@ -20,46 +20,79 @@ enum ImageResizeOutputFormat {
   png,
 }
 
+/// The main screen of the application, where users can select and resize images.
 class ImageResizeScreen extends StatefulWidget {
+  /// Creates an [ImageResizeScreen].
   const ImageResizeScreen({
     super.key,
     required this.handleThemeChange,
     required this.themeMode,
   });
 
+  /// A callback to handle theme changes.
   final void Function(ThemeMode) handleThemeChange;
+
+  /// The current theme mode.
   final ThemeMode themeMode;
 
   @override
   ImageResizeScreenState createState() => ImageResizeScreenState();
 }
 
+/// The state for the [ImageResizeScreen].
 class ImageResizeScreenState extends State<ImageResizeScreen> {
+  /// The directory where the resized images will be saved.
   String? _saveDirectory;
 
+  /// The list of images selected by the user.
   final List<File> _selectedImages = [];
 
+  /// The controller for the width text field.
   final _widthController = TextEditingController();
+
+  /// The controller for the height text field.
   final _heightController = TextEditingController();
+
+  /// The controller for the suffix text field.
   final _suffixController = TextEditingController();
+
+  /// The controller for the resolution text field.
   final _resolutionController = TextEditingController();
 
+  /// The unit for the resolution.
   String _resolutionUnit = 'pixels/inch';
 
+  /// Whether to scale the image proportionally.
   bool _scaleProportionally = true;
+
+  /// Whether to resample the image.
   bool _resampleImage = true;
+
+  /// Whether to maintain the aspect ratio of the image.
   bool _maintainAspectRatio = true;
+
+  /// The aspect ratio of the first selected image.
   double? _aspectRatio;
 
+  /// The first image selected by the user.
   img.Image? _firstImage;
 
+  /// Whether to overwrite all existing files.
   bool _overwriteAll = false;
+
+  /// Whether the user has manually edited the suffix.
   bool _userEditedSuffix = false;
+
+  /// Whether to include the EXIF data in the resized image.
   bool _includeExif = true;
 
+  /// The output format for the resized image.
   var _outputFormat = ImageResizeOutputFormat.sameAsOriginal;
 
+  /// The focus node for the width text field.
   final _widthFocusNode = FocusNode();
+
+  /// The focus node for the height text field.
   final _heightFocusNode = FocusNode();
 
   @override
@@ -74,6 +107,7 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
 
   @override
   void dispose() {
+    // Clean up the controllers and focus nodes when the widget is disposed.
     _widthFocusNode.removeListener(_onWidthFocusChange);
     _heightFocusNode.removeListener(_onHeightFocusChange);
 
@@ -88,10 +122,13 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
     super.dispose();
   }
 
+  /// Sets [_userEditedSuffix] to true when the user edits the suffix.
   void _handleUserSuffixEdit() {
     _userEditedSuffix = true;
   }
 
+  /// When the width focus changes, if maintain aspect ratio is enabled, the
+  /// height is updated to maintain the aspect ratio.
   void _onWidthFocusChange() {
     if (!_widthFocusNode.hasFocus &&
         _maintainAspectRatio &&
@@ -109,6 +146,8 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
     }
   }
 
+  /// When the height focus changes, if maintain aspect ratio is enabled, the
+  /// width is updated to maintain the aspect ratio.
   void _onHeightFocusChange() {
     if (!_heightFocusNode.hasFocus &&
         _maintainAspectRatio &&
@@ -127,6 +166,7 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
     }
   }
 
+  /// Picks images from the device's gallery.
   Future<void> _pickImages() async {
     final imagePicker = ImagePicker();
     final pickedFiles = await imagePicker.pickMultiImage();
@@ -174,6 +214,7 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
     }
   }
 
+  /// Clears the selected images.
   void _clearImageSelections() {
     setState(() {
       _selectedImages.clear();
@@ -266,6 +307,7 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
     }
   }
 
+  /// Picks images from the cloud.
   Future<void> _pickFromCloud() async {
     final result = await FilePicker.platform.pickFiles(
       allowMultiple: true,
@@ -323,6 +365,7 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
     'inches': 'in',
   };
 
+  /// Resizes the selected images and saves them to the selected directory.
   Future<void> _resizeImages() async {
     if (_selectedImages.isEmpty) {
       _showSnackBar('Please select at least one image.');
@@ -469,6 +512,7 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
     }
   }
 
+  /// Requests permission to access the storage.
   Future<bool> _requestPermission() async {
     if (Platform.isMacOS) {
       return true;
@@ -490,6 +534,7 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
     return true;
   }
 
+  /// Gets the downloads directory.
   Future<Directory?> _getDownloadsDirectory() async {
     if (Platform.isAndroid) {
       return Directory('/storage/emulated/0/Download');
@@ -501,6 +546,7 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
     return null;
   }
 
+  /// Selects the directory where the resized images will be saved.
   Future<void> _selectSaveDirectory() async {
     final result = await FilePicker.platform.getDirectoryPath(
       initialDirectory: _saveDirectory,
@@ -512,6 +558,7 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
     }
   }
 
+  /// Gets the new file name for the resized image.
   String _getNewFileName(
     String oldPath,
     int width,
@@ -536,6 +583,7 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
     return '$oldNameWithoutExtension$suffix.$newExtension';
   }
 
+  /// Shows a snackbar with the given [message].
   void _showSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
@@ -606,6 +654,7 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
     );
   }
 
+  /// Builds the header of the screen.
   Widget _buildHeader(bool isDarkMode) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 16.0),
@@ -638,6 +687,7 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
     );
   }
 
+  /// Builds the source section of the screen.
   Widget _buildSourceSection(ThemeData theme) {
     return _buildSectionCard(
       title: 'Source',
@@ -705,6 +755,7 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
     );
   }
 
+  /// Builds the options section of the screen.
   Widget _buildOptionsSection(ThemeData theme) {
     return _buildSectionCard(
       title: 'Options',
@@ -744,6 +795,7 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
     );
   }
 
+  /// Builds the output section of the screen.
   Widget _buildOutputSection(ThemeData theme) {
     return _buildSectionCard(
       title: 'Output',
@@ -772,6 +824,7 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
     );
   }
 
+  /// Builds the save location section of the screen.
   Widget _buildSaveLocationSection(ThemeData theme) {
     return _buildSectionCard(
       title: 'Save Location',
@@ -810,6 +863,7 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
     );
   }
 
+  /// Builds the resize button.
   Widget _buildResizeButton() {
     return ElevatedButton(
       onPressed: _selectedImages.isNotEmpty ? _resizeImages : null,
@@ -829,6 +883,7 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
     );
   }
 
+  /// Builds a section card.
   Widget _buildSectionCard({
     required String title,
     required Widget child,
@@ -865,6 +920,7 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
     );
   }
 
+  /// Builds an icon button.
   Widget _buildIconButton({
     required ThemeData theme,
     required IconData icon,
@@ -884,6 +940,7 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
     );
   }
 
+  /// Builds a checkbox row.
   Widget _buildCheckboxRow({
     required String label,
     required bool value,

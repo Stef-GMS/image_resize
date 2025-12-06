@@ -1,13 +1,26 @@
 import 'package:flutter/material.dart';
 
+/// A widget that displays a text field row with a label.
 class TextFieldRow extends StatelessWidget {
+  /// The theme data.
   final ThemeData theme;
+
+  /// The label for the text field.
   final String label;
+
+  /// The controller for the text field.
   final TextEditingController controller;
+
+  /// The focus node for the text field.
   final FocusNode? focusNode;
+
+  /// The placeholder text for the text field.
   final String? placeholder;
+
+  /// The unit to display next to the text field.
   final String? unit;
 
+  /// Creates a [TextFieldRow] widget.
   const TextFieldRow({
     super.key,
     required this.theme,

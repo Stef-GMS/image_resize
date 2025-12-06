@@ -1,12 +1,23 @@
 import 'package:flutter/material.dart';
 
+/// A widget that displays a dropdown row with a label.
 class DropdownRow<T> extends StatelessWidget {
+  /// The theme data.
   final ThemeData theme;
+
+  /// The label for the dropdown.
   final String label;
+
+  /// The currently selected value.
   final T value;
+
+  /// The list of items to display in the dropdown.
   final List<T> items;
+
+  /// A callback to handle value changes.
   final ValueChanged<T?> onChanged;
 
+  /// Creates a [DropdownRow] widget.
   const DropdownRow({
     super.key,
     required this.theme,
