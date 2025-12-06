@@ -662,7 +662,7 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
-            'Image Resizer',
+            'Image Resize',
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
               fontWeight: FontWeight.bold,
               color: isDarkMode ? Colors.white : Colors.black,
