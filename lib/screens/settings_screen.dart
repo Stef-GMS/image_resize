@@ -37,16 +37,16 @@ class SettingsScreen extends StatelessWidget {
               child: Column(
                 children: [
                   RadioListTile<ThemeMode>(
-                    title: const Text('System Default'),
+                    title: const Text('System'),
                     value: ThemeMode.system,
-            ),
-            RadioListTile<ThemeMode>(
-              title: const Text('Light'),
-              value: ThemeMode.light,
-            ),
-            RadioListTile<ThemeMode>(
-              title: const Text('Dark'),
-              value: ThemeMode.dark,
+                  ),
+                  RadioListTile<ThemeMode>(
+                    title: const Text('Light'),
+                    value: ThemeMode.light,
+                  ),
+                  RadioListTile<ThemeMode>(
+                    title: const Text('Dark'),
+                    value: ThemeMode.dark,
                   ),
                 ],
               ),
