@@ -1,9 +1,25 @@
 import 'package:flutter/material.dart';
-import 'package:image_resize/widgets/dropdown_row.dart';
-import 'package:image_resize/widgets/text_field_row.dart';
+import 'package:image_resize/models/dimension_unit_type.dart';
+import 'package:image_resize/widgets/dropdown_entry.dart';
+import 'package:image_resize/widgets/text_field_entry.dart';
 
 /// A widget that displays the dimensions section of the screen.
 class DimensionsSection extends StatelessWidget {
+  /// Creates a [DimensionsSection] widget.
+  const DimensionsSection({
+    super.key,
+    required this.theme,
+    required this.maintainAspectRatio,
+    required this.onAspectRatioChanged,
+    required this.dimensionType,
+    required this.onUnitChanged,
+    required this.widthController,
+    required this.widthFocusNode,
+    required this.heightController,
+    required this.heightFocusNode,
+    required this.resolutionController,
+  });
+
   /// The theme data.
   final ThemeData theme;
 
@@ -14,10 +30,10 @@ class DimensionsSection extends StatelessWidget {
   final ValueChanged<bool?> onAspectRatioChanged;
 
   /// The type of dimension to use for resizing.
-  final String dimensionType;
+  final DimensionUnitType dimensionType;
 
   /// A callback to handle unit changes.
-  final ValueChanged<String?> onUnitChanged;
+  final ValueChanged<DimensionUnitType> onUnitChanged;
 
   /// The controller for the width text field.
   final TextEditingController widthController;
@@ -31,35 +47,8 @@ class DimensionsSection extends StatelessWidget {
   /// The focus node for the height text field.
   final FocusNode heightFocusNode;
 
-  /// A map of dimension units.
-  final Map<String, String> unitMap;
-
   /// The controller for the resolution text field.
   final TextEditingController resolutionController;
-
-  /// The unit for the resolution.
-  final String resolutionUnit;
-
-  /// A callback to handle resolution unit changes.
-  final ValueChanged<String?> onResolutionUnitChanged;
-
-  /// Creates a [DimensionsSection] widget.
-  const DimensionsSection({
-    super.key,
-    required this.theme,
-    required this.maintainAspectRatio,
-    required this.onAspectRatioChanged,
-    required this.dimensionType,
-    required this.onUnitChanged,
-    required this.widthController,
-    required this.widthFocusNode,
-    required this.heightController,
-    required this.heightFocusNode,
-    required this.unitMap,
-    required this.resolutionController,
-    required this.resolutionUnit,
-    required this.onResolutionUnitChanged,
-  });
 
   @override
   Widget build(BuildContext context) {
@@ -71,8 +60,10 @@ class DimensionsSection extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            /// Dimensions section header
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -102,55 +93,42 @@ class DimensionsSection extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 16),
-            DropdownRow(
-              theme: theme,
-              label: 'Units',
-              value: dimensionType,
-              items: unitMap.keys.toList(),
-              onChanged: onUnitChanged,
-            ),
-            const SizedBox(height: 16),
-            Row(
+            Wrap(
+              spacing: 16,
               children: [
-                Expanded(
-                  child: TextFieldRow(
+                IntrinsicWidth(
+                  child: DropdownEntry(
+                    theme: theme,
+                    label: 'Units',
+                    value: dimensionType,
+                    items: DimensionUnitType.values,
+                    onChanged: onUnitChanged,
+                  ),
+                ),
+                IntrinsicWidth(
+                  child: TextFieldEntry(
                     theme: theme,
                     label: 'Width',
                     controller: widthController,
                     focusNode: widthFocusNode,
-                    unit: unitMap[dimensionType]!,
+                    unit: dimensionType.label,
                   ),
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: TextFieldRow(
+                IntrinsicWidth(
+                  child: TextFieldEntry(
                     theme: theme,
                     label: 'Height',
                     controller: heightController,
                     focusNode: heightFocusNode,
-                    unit: unitMap[dimensionType]!,
+                    unit: dimensionType.label,
                   ),
                 ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: TextFieldRow(
+                IntrinsicWidth(
+                  child: TextFieldEntry(
                     theme: theme,
-                    label: 'Resolution',
+                    label: 'Res',
+                    unit: 'dpi',
                     controller: resolutionController,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: DropdownRow(
-                    theme: theme,
-                    label: 'Resolution Unit',
-                    value: resolutionUnit,
-                    items: const ['pixels/inch', 'pixels/cm'],
-                    onChanged: onResolutionUnitChanged,
                   ),
                 ),
               ],

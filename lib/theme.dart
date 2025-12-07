@@ -14,11 +14,15 @@ class AppTheme {
   /// The card color for the light theme.
   static const _cardColorLight = Color(0xFFFFFFFF);
 
+  /// The text field color for the light theme.
+  static const _textFieldColorLight = Color(0xFFEDEDED);
+
   /// The card color for the dark theme.
   static const _cardColorDark = Color(0xFF1E1E1E);
 
   /// The light theme data.
   static final ThemeData lightTheme = ThemeData(
+    useMaterial3: false,
     brightness: Brightness.light,
     primaryColor: _primaryColor,
     scaffoldBackgroundColor: _backgroundColorLight,
@@ -38,10 +42,20 @@ class AppTheme {
         ),
       ),
     ),
+    inputDecorationTheme: InputDecorationTheme(
+      fillColor: _textFieldColorLight,
+      filled: true,
+      isDense: true,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12.0),
+        borderSide: BorderSide.none,
+      ),
+    ),
   );
 
   /// The dark theme data.
   static final ThemeData darkTheme = ThemeData(
+    useMaterial3: false,
     brightness: Brightness.dark,
     primaryColor: _primaryColor,
     scaffoldBackgroundColor: _backgroundColorDark,

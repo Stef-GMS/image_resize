@@ -4,10 +4,11 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
 import 'package:image_picker/image_picker.dart';
+import 'package:image_resize/models/dimension_unit_type.dart';
 import 'package:image_resize/screens/settings_screen.dart';
 import 'package:image_resize/widgets/dimensions_section.dart';
-import 'package:image_resize/widgets/dropdown_row.dart';
-import 'package:image_resize/widgets/text_field_row.dart';
+import 'package:image_resize/widgets/dropdown_entry.dart';
+import 'package:image_resize/widgets/text_field_entry.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -59,9 +60,6 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
   /// The controller for the resolution text field.
   final _resolutionController = TextEditingController();
 
-  /// The unit for the resolution.
-  String _resolutionUnit = 'pixels/inch';
-
   /// Whether to scale the image proportionally.
   bool _scaleProportionally = true;
 
@@ -94,6 +92,9 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
 
   /// The focus node for the height text field.
   final _heightFocusNode = FocusNode();
+
+  /// The dimension unit type for the fields to use.
+  var _dimensionType = DimensionUnitType.pixels;
 
   @override
   void initState() {
@@ -197,7 +198,6 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
             // If no DPI information is in the EXIF data, fall back to a default of 72.
             _resolutionController.text = '72';
           }
-          _resolutionUnit = 'pixels/inch';
 
           _widthController.text = image.width.toString();
           _heightController.text = image.height.toString();
@@ -239,38 +239,31 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
     // Parse the resolution from the controller, defaulting to 72 if empty or invalid.
     var resolution = double.tryParse(_resolutionController.text) ?? 72.0;
 
-    // If the unit is pixels/cm, convert the resolution to pixels/inch for
-    // consistent calculations, since 1 inch = 2.54 cm.
-    if (_resolutionUnit == 'pixels/cm') {
-      resolution = resolution * 2.54;
-    }
-
     switch (_dimensionType) {
-      case 'percentage':
+      case DimensionUnitType.percent:
         return (
           (_firstImage!.width * widthInput / 100).round(),
           (_firstImage!.height * heightInput / 100).round(),
         );
-      case 'inches':
+      case DimensionUnitType.inches:
         // Convert inches to pixels using the dynamic resolution.
         return (
           (widthInput * resolution).round(),
           (heightInput * resolution).round(),
         );
-      case 'cm':
+      case DimensionUnitType.cm:
         // Convert centimeters to pixels. 1 inch = 2.54 cm.
         return (
           (widthInput * resolution / 2.54).round(),
           (heightInput * resolution / 2.54).round(),
         );
-      case 'mm':
+      case DimensionUnitType.mm:
         // Convert millimeters to pixels. 1 inch = 25.4 mm.
         return (
           (widthInput * resolution / 25.4).round(),
           (heightInput * resolution / 25.4).round(),
         );
-      case 'pixels':
-      default:
+      case DimensionUnitType.pixels:
         // For pixels, the input is used directly.
         return (
           widthInput.round(),
@@ -342,7 +335,6 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
             // If no DPI information is in the EXIF data, fall back to a default of 72.
             _resolutionController.text = '72';
           }
-          _resolutionUnit = 'pixels/inch';
           _widthController.text = image.width.toString();
           _heightController.text = image.height.toString();
           _userEditedSuffix = false;
@@ -355,15 +347,6 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
       });
     }
   }
-
-  String _dimensionType = 'pixels';
-  final Map<String, String> _unitMap = {
-    'pixels': 'px',
-    'percentage': '%',
-    'cm': 'cm',
-    'mm': 'mm',
-    'inches': 'in',
-  };
 
   /// Resizes the selected images and saves them to the selected directory.
   Future<void> _resizeImages() async {
@@ -585,7 +568,11 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
 
   /// Shows a snackbar with the given [message].
   void _showSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+      ),
+    );
   }
 
   @override
@@ -601,50 +588,46 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
             children: [
               _buildHeader(isDarkMode),
               Expanded(
-                child: ListView(
+                child: SingleChildScrollView(
                   padding: const EdgeInsets.only(top: 8.0),
-                  children: [
-                    _buildSourceSection(theme),
-                    const SizedBox(height: 16),
-                    DimensionsSection(
-                      theme: theme,
-                      maintainAspectRatio: _maintainAspectRatio,
-                      onAspectRatioChanged: (value) {
-                        setState(() {
-                          _maintainAspectRatio = value!;
-                        });
-                      },
-                      dimensionType: _dimensionType,
-                      onUnitChanged: (value) {
-                        setState(() {
-                          _dimensionType = value!;
-                          _updateSuffix();
-                        });
-                      },
-                      widthController: _widthController,
-                      widthFocusNode: _widthFocusNode,
-                      heightController: _heightController,
-                      heightFocusNode: _heightFocusNode,
-                      unitMap: _unitMap,
-                      resolutionController: _resolutionController,
-                      resolutionUnit: _resolutionUnit,
-                      onResolutionUnitChanged: (value) {
-                        setState(() {
-                          _resolutionUnit = value!;
-                          _updateSuffix();
-                        });
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    _buildOptionsSection(theme),
-                    const SizedBox(height: 16),
-                    _buildOutputSection(theme),
-                    const SizedBox(height: 16),
-                    _buildSaveLocationSection(theme),
-                    const SizedBox(height: 24),
-                    _buildResizeButton(),
-                    const SizedBox(height: 16),
-                  ],
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _buildSourceSection(theme),
+                      const SizedBox(height: 16),
+                      DimensionsSection(
+                        theme: theme,
+                        maintainAspectRatio: _maintainAspectRatio,
+                        onAspectRatioChanged: (value) {
+                          setState(() {
+                            _maintainAspectRatio = value!;
+                          });
+                        },
+                        dimensionType: _dimensionType,
+                        onUnitChanged: (value) {
+                          setState(() {
+                            _dimensionType = value!;
+                            _updateSuffix();
+                          });
+                        },
+                        widthController: _widthController,
+                        widthFocusNode: _widthFocusNode,
+                        heightController: _heightController,
+                        heightFocusNode: _heightFocusNode,
+                        resolutionController: _resolutionController,
+                      ),
+                      const SizedBox(height: 16),
+                      _buildOptionsSection(theme),
+                      const SizedBox(height: 16),
+                      _buildOutputSection(theme),
+                      const SizedBox(height: 16),
+                      _buildSaveLocationSection(theme),
+                      const SizedBox(height: 24),
+                      _buildResizeButton(),
+                      const SizedBox(height: 16),
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -801,14 +784,14 @@ class ImageResizeScreenState extends State<ImageResizeScreen> {
       title: 'Output',
       child: Column(
         children: [
-          TextFieldRow(
+          TextFieldEntry(
             theme: theme,
             label: 'File Suffix',
             controller: _suffixController,
             placeholder: 'e.g., _resized',
           ),
           const SizedBox(height: 16),
-          DropdownRow<ImageResizeOutputFormat>(
+          DropdownEntry<ImageResizeOutputFormat>(
             theme: theme,
             label: 'Output Format',
             value: _outputFormat,

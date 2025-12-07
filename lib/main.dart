@@ -1,9 +1,27 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:image_resize/screens/image_resize_screen.dart';
 import 'package:image_resize/theme.dart';
+import 'package:window_manager/window_manager.dart';
 
 /// Main entry point of the application.
-void main() {
+void main() async {
+  if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+    WidgetsFlutterBinding.ensureInitialized();
+    await windowManager.ensureInitialized();
+
+    await windowManager.setMinimumSize(const Size(800, 800));
+    await windowManager.setMaximumSize(const Size(618, 1200));
+    await windowManager.setSize(const Size(800, 800));
+    await windowManager.setAspectRatio(0.54);
+    await windowManager.setMaximizable(false);
+
+    await windowManager.setTitle('Image Resize'); //Window title
+  }
+  // final repository = SqliteRepository();
+  // await repository.init();
+
   runApp(const MainApp());
 }
 
