@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_resize/screens/image_resize_screen.dart';
 import 'package:image_resize/theme.dart';
 import 'package:window_manager/window_manager.dart';
@@ -28,7 +29,7 @@ void main() async {
   // final repository = SqliteRepository();
   // await repository.init();
 
-  runApp(const MainApp());
+  runApp(const ProviderScope(child: MainApp()));
 }
 
 /// The root widget of the application.

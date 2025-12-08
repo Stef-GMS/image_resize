@@ -8,9 +8,9 @@ class TextFieldEntry extends StatelessWidget {
     required this.theme,
     required this.label,
     required this.controller,
-    this.focusNode,
     this.placeholder,
     this.unit,
+    this.onChanged,
   });
 
   /// The theme data.
@@ -22,14 +22,14 @@ class TextFieldEntry extends StatelessWidget {
   /// The controller for the text field.
   final TextEditingController controller;
 
-  /// The focus node for the text field.
-  final FocusNode? focusNode;
-
   /// The placeholder text for the text field.
   final String? placeholder;
 
   /// The unit to display next to the text field.
   final String? unit;
+
+  /// A callback to handle text changes.
+  final ValueChanged<String>? onChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -57,11 +57,11 @@ class TextFieldEntry extends StatelessWidget {
         ),
         TextField(
           controller: controller,
-          focusNode: focusNode,
           keyboardType: TextInputType.number,
           decoration: InputDecoration(
             hintText: placeholder,
           ),
+          onChanged: onChanged,
         ),
       ],
     );

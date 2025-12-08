@@ -14,10 +14,11 @@ class DimensionsSection extends StatelessWidget {
     required this.dimensionType,
     required this.onUnitChanged,
     required this.widthController,
-    required this.widthFocusNode,
     required this.heightController,
-    required this.heightFocusNode,
     required this.resolutionController,
+    this.onWidthChanged,
+    this.onHeightChanged,
+    this.onResolutionChanged,
   });
 
   /// The theme data.
@@ -38,17 +39,20 @@ class DimensionsSection extends StatelessWidget {
   /// The controller for the width text field.
   final TextEditingController widthController;
 
-  /// The focus node for the width text field.
-  final FocusNode widthFocusNode;
-
   /// The controller for the height text field.
   final TextEditingController heightController;
 
-  /// The focus node for the height text field.
-  final FocusNode heightFocusNode;
-
   /// The controller for the resolution text field.
   final TextEditingController resolutionController;
+
+  /// A callback to handle width text changes.
+  final ValueChanged<String>? onWidthChanged;
+
+  /// A callback to handle height text changes.
+  final ValueChanged<String>? onHeightChanged;
+
+  /// A callback to handle resolution text changes.
+  final ValueChanged<String>? onResolutionChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -95,6 +99,7 @@ class DimensionsSection extends StatelessWidget {
             const SizedBox(height: 16),
             Wrap(
               spacing: 16,
+              runSpacing: 16,
               children: [
                 IntrinsicWidth(
                   child: DropdownEntry(
@@ -110,8 +115,8 @@ class DimensionsSection extends StatelessWidget {
                     theme: theme,
                     label: 'Width',
                     controller: widthController,
-                    focusNode: widthFocusNode,
                     unit: dimensionType.label,
+                    onChanged: onWidthChanged,
                   ),
                 ),
                 IntrinsicWidth(
@@ -119,8 +124,8 @@ class DimensionsSection extends StatelessWidget {
                     theme: theme,
                     label: 'Height',
                     controller: heightController,
-                    focusNode: heightFocusNode,
                     unit: dimensionType.label,
+                    onChanged: onHeightChanged,
                   ),
                 ),
                 IntrinsicWidth(
@@ -129,6 +134,7 @@ class DimensionsSection extends StatelessWidget {
                     label: 'Res',
                     unit: 'dpi',
                     controller: resolutionController,
+                    onChanged: onResolutionChanged,
                   ),
                 ),
               ],

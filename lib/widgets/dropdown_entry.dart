@@ -34,11 +34,10 @@ class DropdownEntry<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     String labelForItem(T item) {
-      return switch (item) {
-        DropdownLabel() => item.label,
-        Enum() => item.name,
-        _ => item.toString(),
-      };
+      if (item is DropdownLabel) {
+        return item.label;
+      }
+      return item.toString();
     }
 
     return Column(
