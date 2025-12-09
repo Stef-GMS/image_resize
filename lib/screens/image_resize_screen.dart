@@ -94,7 +94,11 @@ class _ImageResizeScreenState extends ConsumerState<ImageResizeScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 16.0),
           child: Column(
             children: [
-              HeaderSection(isDarkMode: isDarkMode, handleThemeChange: widget.handleThemeChange, themeMode: widget.themeMode),
+              HeaderSection(
+                isDarkMode: isDarkMode,
+                handleThemeChange: widget.handleThemeChange,
+                themeMode: widget.themeMode,
+              ),
               Expanded(
                 child: Stack(
                   children: [
@@ -123,7 +127,10 @@ class _ImageResizeScreenState extends ConsumerState<ImageResizeScreen> {
                           const SizedBox(height: 16),
                           OptionsSection(theme: theme),
                           const SizedBox(height: 16),
-                          OutputSection(theme: theme, suffixController: _suffixController),
+                          OutputSection(
+                            theme: theme,
+                            suffixController: _suffixController,
+                          ),
                           const SizedBox(height: 16),
                           SaveLocationSection(theme: theme),
                           const SizedBox(height: 24),
@@ -150,21 +157,6 @@ class _ImageResizeScreenState extends ConsumerState<ImageResizeScreen> {
   }
 
   // region Build Methods (now pure UI)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
   // endregion
 }
