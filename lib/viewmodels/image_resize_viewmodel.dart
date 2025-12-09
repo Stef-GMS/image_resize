@@ -1,20 +1,22 @@
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image/image.dart' as img;
 import 'package:image_picker/image_picker.dart';
-import 'package:image_gallery_saver/image_gallery_saver.dart'; // For saving to gallery
 import 'package:image_resize/models/dimension_unit_type.dart';
 import 'package:image_resize/models/image_resize_output_format.dart';
 import 'package:image_resize/models/image_resize_state.dart';
 import 'package:image_resize/services/image_processing_service.dart';
+import 'package:image_resize/services/permission_service.dart';
+import 'package:image_resize/services/file_system_service.dart';
 
 
 final tagXResolution = img.exifTagNameToID['XResolution']!;
 final tagYResolution = img.exifTagNameToID['YResolution']!;
+
+final permissionServiceProvider = Provider((ref) => PermissionService());
+final fileSystemServiceProvider = Provider((ref) => FileSystemService());
 
 /// Provider to make the ImageResizeViewModel available to the UI.
 final imageResizeViewModelProvider =
@@ -108,8 +110,16 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
   }
 
   Future<void> pickFromCloud() async {
-    // TODO: Implement Google Drive picking using multi_cloud_storage
-    state = state.copyWith(snackbarMessage: 'Cloud picker not yet implemented.');
+    final result = await FilePicker.platform.pickFiles(
+      allowMultiple: true,
+      type: FileType.custom,
+      allowedExtensions: [
+        'jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp',
+      ],
+    );
+    if (result != null && result.files.isNotEmpty) {
+      await _processPickedFiles(result.paths.where((p) => p != null).cast<String>().toList());
+    }
   }
 
   Future<void> _processPickedFiles(List<String> paths) async {
@@ -157,119 +167,151 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
 
   // region Image Resizing and Saving Logic
   Future<void> resizeImages() async {
+    final imageProcessingService = ref.read(imageProcessingServiceProvider);
+    final permissionService = ref.read(permissionServiceProvider);
+    final fileSystemService = ref.read(fileSystemServiceProvider);
+
     if (state.selectedImages.isEmpty) {
       state = state.copyWith(snackbarMessage: 'Please select at least one image.');
       return;
     }
+
     if (state.width.isEmpty || state.height.isEmpty) {
       state = state.copyWith(snackbarMessage: 'Please enter width and height.');
       return;
     }
 
-    state = state.copyWith(isResizing: true);
+    final widthInput = double.tryParse(state.width);
+    final heightInput = double.tryParse(state.height);
 
-    final imageProcessingService = ref.read(imageProcessingServiceProvider);
-    final List<Uint8List> processedImages = [];
-
-    for (final imageFile in state.selectedImages) {
-      final (width, height) = _calculatePixelDimensions();
-      final originalBytes = await imageFile.readAsBytes();
-
-      final resizedBytes = await imageProcessingService.resizeImage(
-        imageData: originalBytes,
-        newWidth: width,
-        newHeight: height,
-      );
-      processedImages.add(resizedBytes);
-    }
-
-    state = state.copyWith(
-      isResizing: false,
-      hasResized: true,
-      resizedImagesData: processedImages,
-      snackbarMessage: 'Images resized. Ready to save.',
-    );
-  }
-
-  Future<void> saveToGallery() async {
-    if (!state.hasResized || state.resizedImagesData == null) {
-      state = state.copyWith(snackbarMessage: 'No images have been resized yet.');
-      return;
-    }
-    state = state.copyWith(isResizing: true); // Re-using for save operation indication
-
-    for (int i = 0; i < state.resizedImagesData!.length; i++) {
-      final resizedBytes = state.resizedImagesData![i];
-      final originalImagePath = state.selectedImages[i].path;
-      final newFileName = _getNewFileName(originalImagePath, state.suffix);
-
-      await ImageGallerySaver.saveImage(
-        resizedBytes,
-        name: newFileName,
-        quality: 100, // Assuming full quality for saving
-      );
-    }
-
-    state = state.copyWith(
-      isResizing: false,
-      snackbarMessage: 'Images saved to Photo Gallery.',
-      hasResized: false,
-      resizedImagesData: null,
-    );
-  }
-
-  Future<void> saveToFolder() async {
-    if (!state.hasResized || state.resizedImagesData == null) {
-      state = state.copyWith(snackbarMessage: 'No images have been resized yet.');
+    if (widthInput == null || heightInput == null) {
+      state = state.copyWith(snackbarMessage: 'Invalid width or height.');
       return;
     }
 
     String? savePath = state.saveDirectory;
     if (savePath == null) {
-      await selectSaveDirectory();
-      savePath = state.saveDirectory;
-      if (savePath == null) {
-        state = state.copyWith(
-          snackbarMessage: 'Please select a save directory.',
+      final defaultDownloads = await fileSystemService.getDownloadsDirectoryPath();
+      if (defaultDownloads != null) {
+        savePath = defaultDownloads;
+      } else {
+        final selectedPath = await selectSaveDirectory();
+        savePath = selectedPath;
+        if (savePath == null) {
+          state = state.copyWith(snackbarMessage: 'Please select a save directory.');
+          return;
+        }
+      }
+    }
+
+    if (await permissionService.requestStoragePermission()) {
+      state = state.copyWith(isResizing: true, overwriteAll: false); // Reset overwriteAll
+
+      for (final imageFile in state.selectedImages) {
+        final newFileName = fileSystemService.getNewFileName(
+          imageFile.path,
+          widthInput.round(),
+          heightInput.round(),
+          state.suffix,
+          state.outputFormat,
         );
-        return;
+        final newPath = '$savePath/$newFileName';
+
+        final parentDir = File(newPath).parent;
+        if (!await parentDir.exists()) {
+          try {
+            await parentDir.create(recursive: true);
+          } catch (e) {
+            state = state.copyWith(snackbarMessage: 'Error: Could not create save directory: $e');
+            continue; // Skip this image if directory can't be created
+          }
+        }
+
+        // Overwrite logic - for now, if file exists and not overwriteAll, then skip.
+        // Dialog handling is in UI.
+        if (!state.overwriteAll && await File(newPath).exists()) {
+          state = state.copyWith(snackbarMessage: 'File $newFileName already exists. Skipping.');
+          continue;
+        }
+
+        // To handle overwrite, explicitly delete if we decide to overwrite.
+        if (state.overwriteAll && await File(newPath).exists()) {
+             try {
+                await File(newPath).delete();
+              } catch (e) {
+                state = state.copyWith(snackbarMessage: 'Error: Could not delete existing file for overwrite: $e');
+                continue; // Skip this image if deletion fails
+              }
+        }
+
+        final image = img.decodeImage(await imageFile.readAsBytes());
+        if (image == null) {
+          state = state.copyWith(snackbarMessage: 'Error decoding image: ${imageFile.path}');
+          continue;
+        }
+
+        final (width, height) = _calculatePixelDimensions();
+
+        final originalBytes = await imageFile.readAsBytes(); // Re-read for service
+
+        final resizedBytes = await imageProcessingService.resizeImage(
+          imageData: originalBytes,
+          newWidth: width,
+          newHeight: height,
+        );
+
+        final resizedImage = img.decodeImage(resizedBytes);
+        if (resizedImage == null) {
+          state = state.copyWith(snackbarMessage: 'Error decoding resized image: ${imageFile.path}');
+          continue;
+        }
+
+        final resolution = int.tryParse(state.resolution) ?? 72;
+
+        final exif = image.exif;
+        exif.imageIfd[tagXResolution] = img.IfdValueRational(resolution, 1);
+        exif.imageIfd[tagYResolution] = img.IfdValueRational(resolution, 1);
+        resizedImage.exif = exif;
+
+        List<int> encodedImage;
+        final outputFormat = switch (state.outputFormat) {
+          ImageResizeOutputFormat.sameAsOriginal =>
+            imageFile.path.split('.').last.toLowerCase() == 'png' ? 'png' : 'jpg',
+          _ => state.outputFormat.name,
+        };
+        if (outputFormat == 'jpg') {
+          encodedImage = img.encodeJpg(resizedImage);
+        } else {
+          encodedImage = img.PngEncoder(
+            filter: img.PngFilter.paeth,
+            level: 6,
+            pixelDimensions: img.PngPhysicalPixelDimensions.dpi(resolution),
+          ).encode(resizedImage); // Use resizedImage here
+        }
+
+        await File(newPath).writeAsBytes(encodedImage);
       }
+      state = state.copyWith(
+        isResizing: false,
+        hasResized: false, // Reset hasResized after saving
+        resizedImagesData: null,
+        snackbarMessage: 'Images resized and saved to $savePath',
+      );
     }
-
-    state = state.copyWith(isResizing: true); // Re-using for save operation indication
-
-    for (int i = 0; i < state.resizedImagesData!.length; i++) {
-      final resizedBytes = state.resizedImagesData![i];
-      final originalImagePath = state.selectedImages[i].path;
-      final newFileName = _getNewFileName(originalImagePath, state.suffix);
-      final newPath = '$savePath/$newFileName';
-
-      final parentDir = File(newPath).parent;
-      if (!await parentDir.exists()) {
-        await parentDir.create(recursive: true);
-      }
-      await File(newPath).writeAsBytes(resizedBytes);
-    }
-
-    state = state.copyWith(
-      isResizing: false,
-      snackbarMessage: 'Images saved to $savePath.',
-      hasResized: false,
-      resizedImagesData: null,
-    );
   }
 
-  Future<void> selectSaveDirectory() async {
-    final result = await FilePicker.platform.getDirectoryPath(
+  // Helper for selectSaveDirectory
+  Future<String?> selectSaveDirectory() async {
+     final result = await FilePicker.platform.getDirectoryPath(
       initialDirectory: state.saveDirectory,
     );
     if (result != null) {
       state = state.copyWith(saveDirectory: result);
+      return result;
     }
+    return null;
   }
   // endregion
-
-  // region Private Helpers
   (int, int) _calculatePixelDimensions() {
     if (state.firstImage == null) return (0, 0);
 
@@ -307,21 +349,6 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
     }
   }
 
-  String _getNewFileName(String oldPath, String suffix) {
-    final oldFileName = oldPath.split('/').last;
-    final oldExtension = oldFileName.split('.').last;
-    final oldNameWithoutExtension = oldFileName.substring(
-      0,
-      oldFileName.length - oldExtension.length - 1,
-    );
 
-    String newExtension;
-    if (state.outputFormat == ImageResizeOutputFormat.sameAsOriginal) {
-      newExtension = oldExtension.toLowerCase();
-    } else {
-      newExtension = state.outputFormat.name;
-    }
-    return '$oldNameWithoutExtension$suffix.$newExtension';
-  }
   //endregion
 }
