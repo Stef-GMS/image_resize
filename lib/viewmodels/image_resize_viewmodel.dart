@@ -1,15 +1,19 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image/image.dart' as img;
 import 'package:image_picker/image_picker.dart';
+import 'package:image_gallery_saver/image_gallery_saver.dart'; // For saving to gallery
+import 'package:image_resize/models/cloud_storage_provider.dart';
+import 'package:image_resize/models/device_picker_source.dart';
 import 'package:image_resize/models/dimension_unit_type.dart';
 import 'package:image_resize/models/image_resize_output_format.dart';
 import 'package:image_resize/models/image_resize_state.dart';
 import 'package:image_resize/services/image_processing_service.dart';
-import 'package:path_provider/path_provider.dart';
+
 
 final tagXResolution = img.exifTagNameToID['XResolution']!;
 final tagYResolution = img.exifTagNameToID['YResolution']!;
@@ -20,7 +24,7 @@ final imageResizeViewModelProvider =
   ImageResizeViewModel.new,
 );
 
-/// The ViewModel (Notifier) for the Image Resize screen.
+/// The ViewModel (the Notifier) for the Image Resize screen.
 ///
 /// This class manages the state ([ImageResizeState]) and business logic
 /// for the screen. It interacts with services (like [ImageProcessingService])
@@ -32,6 +36,14 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
   }
 
   // region State Update Methods
+  void setDevicePickerSource(DevicePickerSource source) {
+    state = state.copyWith(devicePickerSource: source);
+  }
+
+  void setCloudStorageProvider(CloudStorageProvider provider) {
+    state = state.copyWith(cloudStorageProvider: provider);
+  }
+
   void setDimensionType(DimensionUnitType type) {
     state = state.copyWith(dimensionType: type);
     _updateSuffix();
@@ -95,8 +107,35 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
   }
   // endregion
 
-  // region Business Logic Methods
-  Future<void> pickImages() async {
+  // region Image Picking Logic
+  Future<void> pickFromDevice() async {
+    switch (state.devicePickerSource) {
+      case DevicePickerSource.gallery:
+        await _pickFromGallery();
+        break;
+      case DevicePickerSource.fileSystem:
+        await _pickFromFileSystem();
+        break;
+    }
+  }
+
+  Future<void> pickFromCloud() async {
+    switch (state.cloudStorageProvider) {
+      case CloudStorageProvider.iCloudDrive:
+        await _pickFromFileSystem(); // FilePicker supports iCloud Drive on iOS
+        break;
+      case CloudStorageProvider.googleDrive:
+        // TODO: Implement Google Drive picking using multi_cloud_storage
+        state = state.copyWith(snackbarMessage: 'Google Drive picker not yet implemented.');
+        break;
+      case CloudStorageProvider.dropbox:
+        // TODO: Implement Dropbox picking using multi_cloud_storage
+        state = state.copyWith(snackbarMessage: 'Dropbox picker not yet implemented.');
+        break;
+    }
+  }
+
+  Future<void> _pickFromGallery() async {
     final imagePicker = ImagePicker();
     final pickedFiles = await imagePicker.pickMultiImage();
 
@@ -105,7 +144,7 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
     }
   }
 
-  Future<void> pickFromCloud() async {
+  Future<void> _pickFromFileSystem() async {
     final result = await FilePicker.platform.pickFiles(
       allowMultiple: true,
       type: FileType.custom,
@@ -153,18 +192,13 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
       height: '',
       suffix: '',
       userEditedSuffix: false,
+      resizedImagesData: null,
+      hasResized: false,
     );
   }
+  // endregion
 
-  Future<void> selectSaveDirectory() async {
-    final result = await FilePicker.platform.getDirectoryPath(
-      initialDirectory: state.saveDirectory,
-    );
-    if (result != null) {
-      state = state.copyWith(saveDirectory: result);
-    }
-  }
-
+  // region Image Resizing and Saving Logic
   Future<void> resizeImages() async {
     if (state.selectedImages.isEmpty) {
       state = state.copyWith(snackbarMessage: 'Please select at least one image.');
@@ -177,22 +211,8 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
 
     state = state.copyWith(isResizing: true);
 
-    var savePath = state.saveDirectory;
-    if (savePath == null) {
-      // Logic to get default downloads directory can be complex and platform-specific
-      // For now, we'll just ask the user to select one.
-      await selectSaveDirectory();
-      savePath = state.saveDirectory;
-      if (savePath == null) {
-        state = state.copyWith(
-          isResizing: false,
-          snackbarMessage: 'Please select a save directory.',
-        );
-        return;
-      }
-    }
-
     final imageProcessingService = ref.read(imageProcessingServiceProvider);
+    final List<Uint8List> processedImages = [];
 
     for (final imageFile in state.selectedImages) {
       final (width, height) = _calculatePixelDimensions();
@@ -202,23 +222,93 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
         imageData: originalBytes,
         newWidth: width,
         newHeight: height,
-        // Passing other options would be a good extension
       );
+      processedImages.add(resizedBytes);
+    }
 
-      final newFileName = _getNewFileName(imageFile.path, state.suffix);
+    state = state.copyWith(
+      isResizing: false,
+      hasResized: true,
+      resizedImagesData: processedImages,
+      snackbarMessage: 'Images resized. Ready to save.',
+    );
+  }
+
+  Future<void> saveToGallery() async {
+    if (!state.hasResized || state.resizedImagesData == null) {
+      state = state.copyWith(snackbarMessage: 'No images have been resized yet.');
+      return;
+    }
+    state = state.copyWith(isResizing: true); // Re-using for save operation indication
+
+    for (int i = 0; i < state.resizedImagesData!.length; i++) {
+      final resizedBytes = state.resizedImagesData![i];
+      final originalImagePath = state.selectedImages[i].path;
+      final newFileName = _getNewFileName(originalImagePath, state.suffix);
+
+      await ImageGallerySaver.saveImage(
+        resizedBytes,
+        name: newFileName,
+        quality: 100, // Assuming full quality for saving
+      );
+    }
+
+    state = state.copyWith(
+      isResizing: false,
+      snackbarMessage: 'Images saved to Photo Gallery.',
+      hasResized: false,
+      resizedImagesData: null,
+    );
+  }
+
+  Future<void> saveToFolder() async {
+    if (!state.hasResized || state.resizedImagesData == null) {
+      state = state.copyWith(snackbarMessage: 'No images have been resized yet.');
+      return;
+    }
+
+    String? savePath = state.saveDirectory;
+    if (savePath == null) {
+      await selectSaveDirectory();
+      savePath = state.saveDirectory;
+      if (savePath == null) {
+        state = state.copyWith(
+          snackbarMessage: 'Please select a save directory.',
+        );
+        return;
+      }
+    }
+
+    state = state.copyWith(isResizing: true); // Re-using for save operation indication
+
+    for (int i = 0; i < state.resizedImagesData!.length; i++) {
+      final resizedBytes = state.resizedImagesData![i];
+      final originalImagePath = state.selectedImages[i].path;
+      final newFileName = _getNewFileName(originalImagePath, state.suffix);
       final newPath = '$savePath/$newFileName';
 
-      // NOTE: File overwrite logic is simplified here. The original implementation
-      // had a complex dialog. This can be re-added in the UI layer by checking
-      // `File(newPath).exists()` before calling `resizeImages`.
+      final parentDir = File(newPath).parent;
+      if (!await parentDir.exists()) {
+        await parentDir.create(recursive: true);
+      }
       await File(newPath).writeAsBytes(resizedBytes);
     }
 
     state = state.copyWith(
       isResizing: false,
-      snackbarMessage: 'Images resized and saved to $savePath',
-      overwriteAll: false, // Reset after operation
+      snackbarMessage: 'Images saved to $savePath.',
+      hasResized: false,
+      resizedImagesData: null,
     );
+  }
+
+  Future<void> selectSaveDirectory() async {
+    final result = await FilePicker.platform.getDirectoryPath(
+      initialDirectory: state.saveDirectory,
+    );
+    if (result != null) {
+      state = state.copyWith(saveDirectory: result);
+    }
   }
   // endregion
 

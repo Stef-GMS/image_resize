@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// A screen where the user can change the theme of the application.
-class SettingsScreen extends StatelessWidget {
+/// A screen where the user can change the app settings, now including image source preferences.
+class SettingsScreen extends ConsumerWidget {
   /// Creates a [SettingsScreen].
   const SettingsScreen({super.key, required this.handleThemeChange, required this.themeMode});
 
@@ -12,22 +13,25 @@ class SettingsScreen extends StatelessWidget {
   final ThemeMode themeMode;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Settings'),
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // --- Theme Settings ---
             Text(
               'Theme',
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 16),
-            RadioGroup(
+            RadioGroup<ThemeMode>(
+              // Reintroduced RadioGroup here
               groupValue: themeMode,
               onChanged: (ThemeMode? value) {
                 if (value != null) {
@@ -51,6 +55,7 @@ class SettingsScreen extends StatelessWidget {
                 ],
               ),
             ),
+            const Divider(height: 32),
           ],
         ),
       ),

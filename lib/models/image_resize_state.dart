@@ -2,6 +2,8 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:image/image.dart' as img;
+import 'package:image_resize/models/cloud_storage_provider.dart';
+import 'package:image_resize/models/device_picker_source.dart';
 import 'package:image_resize/models/dimension_unit_type.dart';
 import 'package:image_resize/models/image_resize_output_format.dart';
 
@@ -27,6 +29,10 @@ class ImageResizeState {
   final bool isResizing;
   final bool overwriteAll;
   final String? snackbarMessage;
+  final bool hasResized;
+  final List<Uint8List>? resizedImagesData;
+  final DevicePickerSource devicePickerSource;
+  final CloudStorageProvider cloudStorageProvider;
 
   const ImageResizeState({
     required this.width,
@@ -47,6 +53,10 @@ class ImageResizeState {
     required this.isResizing,
     required this.overwriteAll,
     this.snackbarMessage,
+    required this.hasResized,
+    this.resizedImagesData,
+    required this.devicePickerSource,
+    required this.cloudStorageProvider,
   });
 
   /// Creates the initial state for the image resize screen.
@@ -69,6 +79,10 @@ class ImageResizeState {
         isResizing: false,
         overwriteAll: false,
         snackbarMessage: null,
+        hasResized: false,
+        resizedImagesData: null,
+        devicePickerSource: DevicePickerSource.gallery,
+        cloudStorageProvider: CloudStorageProvider.googleDrive,
       );
 
   ImageResizeState copyWith({
@@ -90,6 +104,10 @@ class ImageResizeState {
     bool? isResizing,
     bool? overwriteAll,
     String? snackbarMessage,
+    bool? hasResized,
+    List<Uint8List>? resizedImagesData,
+    DevicePickerSource? devicePickerSource,
+    CloudStorageProvider? cloudStorageProvider,
   }) {
     return ImageResizeState(
       width: width ?? this.width,
@@ -110,6 +128,10 @@ class ImageResizeState {
       isResizing: isResizing ?? this.isResizing,
       overwriteAll: overwriteAll ?? this.overwriteAll,
       snackbarMessage: snackbarMessage ?? this.snackbarMessage,
+      hasResized: hasResized ?? this.hasResized,
+      resizedImagesData: resizedImagesData ?? this.resizedImagesData,
+      devicePickerSource: devicePickerSource ?? this.devicePickerSource,
+      cloudStorageProvider: cloudStorageProvider ?? this.cloudStorageProvider,
     );
   }
 
@@ -135,7 +157,11 @@ class ImageResizeState {
           saveDirectory == other.saveDirectory &&
           isResizing == other.isResizing &&
           overwriteAll == other.overwriteAll &&
-          snackbarMessage == other.snackbarMessage;
+          snackbarMessage == other.snackbarMessage &&
+          hasResized == other.hasResized &&
+          listEquals(resizedImagesData, other.resizedImagesData) &&
+          devicePickerSource == other.devicePickerSource &&
+          cloudStorageProvider == other.cloudStorageProvider;
 
   @override
   int get hashCode =>
@@ -156,5 +182,9 @@ class ImageResizeState {
       saveDirectory.hashCode ^
       isResizing.hashCode ^
       overwriteAll.hashCode ^
-      snackbarMessage.hashCode;
+      snackbarMessage.hashCode ^
+      hasResized.hashCode ^
+      resizedImagesData.hashCode ^
+      devicePickerSource.hashCode ^
+      cloudStorageProvider.hashCode;
 }
