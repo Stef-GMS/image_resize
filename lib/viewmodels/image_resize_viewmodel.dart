@@ -7,8 +7,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image/image.dart' as img;
 import 'package:image_picker/image_picker.dart';
 import 'package:image_gallery_saver/image_gallery_saver.dart'; // For saving to gallery
-import 'package:image_resize/models/cloud_storage_provider.dart';
-import 'package:image_resize/models/device_picker_source.dart';
 import 'package:image_resize/models/dimension_unit_type.dart';
 import 'package:image_resize/models/image_resize_output_format.dart';
 import 'package:image_resize/models/image_resize_state.dart';
@@ -36,14 +34,6 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
   }
 
   // region State Update Methods
-  void setDevicePickerSource(DevicePickerSource source) {
-    state = state.copyWith(devicePickerSource: source);
-  }
-
-  void setCloudStorageProvider(CloudStorageProvider provider) {
-    state = state.copyWith(cloudStorageProvider: provider);
-  }
-
   void setDimensionType(DimensionUnitType type) {
     state = state.copyWith(dimensionType: type);
     _updateSuffix();
@@ -108,34 +98,7 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
   // endregion
 
   // region Image Picking Logic
-  Future<void> pickFromDevice() async {
-    switch (state.devicePickerSource) {
-      case DevicePickerSource.gallery:
-        await _pickFromGallery();
-        break;
-      case DevicePickerSource.fileSystem:
-        await _pickFromFileSystem();
-        break;
-    }
-  }
-
-  Future<void> pickFromCloud() async {
-    switch (state.cloudStorageProvider) {
-      case CloudStorageProvider.iCloudDrive:
-        await _pickFromFileSystem(); // FilePicker supports iCloud Drive on iOS
-        break;
-      case CloudStorageProvider.googleDrive:
-        // TODO: Implement Google Drive picking using multi_cloud_storage
-        state = state.copyWith(snackbarMessage: 'Google Drive picker not yet implemented.');
-        break;
-      case CloudStorageProvider.dropbox:
-        // TODO: Implement Dropbox picking using multi_cloud_storage
-        state = state.copyWith(snackbarMessage: 'Dropbox picker not yet implemented.');
-        break;
-    }
-  }
-
-  Future<void> _pickFromGallery() async {
+  Future<void> pickImages() async {
     final imagePicker = ImagePicker();
     final pickedFiles = await imagePicker.pickMultiImage();
 
@@ -144,15 +107,9 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
     }
   }
 
-  Future<void> _pickFromFileSystem() async {
-    final result = await FilePicker.platform.pickFiles(
-      allowMultiple: true,
-      type: FileType.custom,
-      allowedExtensions: ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'],
-    );
-    if (result != null && result.files.isNotEmpty) {
-      await _processPickedFiles(result.paths.where((p) => p != null).cast<String>().toList());
-    }
+  Future<void> pickFromCloud() async {
+    // TODO: Implement Google Drive picking using multi_cloud_storage
+    state = state.copyWith(snackbarMessage: 'Cloud picker not yet implemented.');
   }
 
   Future<void> _processPickedFiles(List<String> paths) async {
