@@ -337,9 +337,15 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
       case DimensionUnitType.inches:
         return ((widthInput * resolution).round(), (heightInput * resolution).round());
       case DimensionUnitType.cm:
-        return ((widthInput * resolution / 2.54).round(), (heightInput * resolution / 2.54).round());
+        return (
+          (widthInput * resolution / 2.54).round(),
+          (heightInput * resolution / 2.54).round(),
+        );
       case DimensionUnitType.mm:
-        return ((widthInput * resolution / 25.4).round(), (heightInput * resolution / 25.4).round());
+        return (
+          (widthInput * resolution / 25.4).round(),
+          (heightInput * resolution / 25.4).round(),
+        );
       case DimensionUnitType.pixels:
         return (widthInput.round(), heightInput.round());
     }
