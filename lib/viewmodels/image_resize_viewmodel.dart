@@ -114,7 +114,12 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
       allowMultiple: true,
       type: FileType.custom,
       allowedExtensions: [
-        'jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp',
+        'jpg',
+        'jpeg',
+        'png',
+        'gif',
+        'bmp',
+        'webp',
       ],
     );
     if (result != null && result.files.isNotEmpty) {
