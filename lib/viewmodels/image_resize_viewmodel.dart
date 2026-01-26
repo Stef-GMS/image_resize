@@ -244,7 +244,9 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
              try {
                 await File(newPath).delete();
               } catch (e) {
-                state = state.copyWith(snackbarMessage: 'Error: Could not delete existing file for overwrite: $e');
+            state = state.copyWith(
+              snackbarMessage: 'Error: Could not delete existing file for overwrite: $e',
+            );
                 continue; // Skip this image if deletion fails
               }
         }
@@ -267,7 +269,9 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
 
         final resizedImage = img.decodeImage(resizedBytes);
         if (resizedImage == null) {
-          state = state.copyWith(snackbarMessage: 'Error decoding resized image: ${imageFile.path}');
+          state = state.copyWith(
+            snackbarMessage: 'Error decoding resized image: ${imageFile.path}',
+          );
           continue;
         }
 
