@@ -108,7 +108,7 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
   }
 
   Future<void> pickFromCloud() async {
-    final result = await FilePicker.pickFiles(
+    final result = await FilePicker.platform.pickFiles(
       allowMultiple: true,
       type: FileType.custom,
       //initialDirectory: imageFile.path,
@@ -194,12 +194,15 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
     }
 
     String? savePath = state.saveDirectory;
-    print(savePath);
+    //print('Save path from state: $savePath');
 
-    if (savePath == null) {
+    // If no save directory is set, try to get a default one
+    if (savePath == null || savePath.isEmpty) {
       final defaultDownloads = await fileSystemService.getDownloadsDirectoryPath();
       if (defaultDownloads != null) {
         savePath = defaultDownloads;
+        // Update state with the default directory
+        state = state.copyWith(saveDirectory: savePath);
       } else {
         final selectedPath = await selectSaveDirectory();
         savePath = selectedPath;
@@ -210,9 +213,43 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
       }
     }
 
+    // Verify the directory exists and is writable
+    final saveDir = Directory(savePath);
+    if (!await saveDir.exists()) {
+      try {
+        await saveDir.create(recursive: true);
+      } catch (e) {
+        state = state.copyWith(snackbarMessage: 'Error: Cannot access save directory: $e');
+        return;
+      }
+    }
+
+    // Test if we can write to this directory (important for sandboxed apps and iCloud)
+    try {
+      final testFile = File('$savePath/.test_write_${DateTime.now().millisecondsSinceEpoch}');
+      await testFile.writeAsString('test');
+      await testFile.delete();
+      //print('Save directory is writable: $savePath');
+    } catch (e) {
+      //print('Cannot write to directory: $savePath, error: $e');
+      // Ask user to select a writable directory
+      state = state.copyWith(
+        snackbarMessage: 'Cannot save to this location. Please choose a save folder.',
+      );
+      final selectedPath = await selectSaveDirectory();
+      if (selectedPath == null) {
+        state = state.copyWith(
+          snackbarMessage: 'Please select a save directory.',
+          isResizing: false,
+        );
+        return;
+      }
+      savePath = selectedPath;
+    }
+
     if (await permissionService.requestStoragePermission()) {
       state = state.copyWith(isResizing: true, overwriteAll: false); // Reset overwriteAll
-      print('inside if (await permissionService.requestStoragePermission()) ');
+      //print('inside if (await permissionService.requestStoragePermission()) ');
 
       for (final imageFile in state.selectedImages) {
         final newFileName = fileSystemService.getNewFileName(
@@ -314,10 +351,10 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
 
   // Helper for selectSaveDirectory
   Future<String?> selectSaveDirectory() async {
-    final result = await FilePicker.getDirectoryPath(
+    final result = await FilePicker.platform.getDirectoryPath(
       initialDirectory: state.saveDirectory,
     );
-    print(result);
+    //print(result);
     if (result != null) {
       state = state.copyWith(saveDirectory: result);
       return result;

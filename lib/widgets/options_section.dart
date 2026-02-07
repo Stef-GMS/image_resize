@@ -19,24 +19,36 @@ class OptionsSection extends ConsumerWidget {
 
     return SectionCard(
       title: 'Options',
-      child: Column(
+      child: Wrap(
+        spacing: 24,
+        runSpacing: 12,
         children: [
-          CheckboxRow(
-            label: 'Scale Proportionally',
-            value: state.scaleProportionally,
-            onChanged: (value) => notifier.setScaleProportionally(value!),
+          IntrinsicWidth(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 130),
+              child: CheckboxRow(
+                label: 'Scale Proportionally',
+                value: state.scaleProportionally,
+                onChanged: (value) => notifier.setScaleProportionally(value!),
+              ),
+            ),
           ),
-          const Divider(),
-          CheckboxRow(
-            label: 'Resample Image',
-            value: state.resampleImage,
-            onChanged: (value) => notifier.setResampleImage(value!),
+          IntrinsicWidth(
+            child: CheckboxRow(
+              label: 'Resample Image',
+              value: state.resampleImage,
+              onChanged: (value) => notifier.setResampleImage(value!),
+            ),
           ),
-          const Divider(),
-          CheckboxRow(
-            label: 'Include metadata (EXIF)',
-            value: state.includeExif,
-            onChanged: (value) => notifier.setIncludeExif(value!),
+          IntrinsicWidth(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 150),
+              child: CheckboxRow(
+                label: 'Include metadata (EXIF)',
+                value: state.includeExif,
+                onChanged: (value) => notifier.setIncludeExif(value!),
+              ),
+            ),
           ),
         ],
       ),
