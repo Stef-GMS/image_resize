@@ -21,17 +21,17 @@ class CheckboxRow extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            SizedBox(
+              height: 20,
+              width: 20,
+              child: Checkbox(value: value, onChanged: onChanged),
+            ),
+            const SizedBox(width: 8),
             Flexible(
               child: Text(
                 label,
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
-            ),
-            const SizedBox(width: 8),
-            SizedBox(
-              height: 20,
-              width: 20,
-              child: Checkbox(value: value, onChanged: onChanged),
             ),
           ],
         ),
