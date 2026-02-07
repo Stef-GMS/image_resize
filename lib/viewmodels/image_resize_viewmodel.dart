@@ -7,10 +7,9 @@ import 'package:image_picker/image_picker.dart';
 import 'package:image_resize/models/dimension_unit_type.dart';
 import 'package:image_resize/models/image_resize_output_format.dart';
 import 'package:image_resize/models/image_resize_state.dart';
+import 'package:image_resize/services/file_system_service.dart';
 import 'package:image_resize/services/image_processing_service.dart';
 import 'package:image_resize/services/permission_service.dart';
-import 'package:image_resize/services/file_system_service.dart';
-
 
 final tagXResolution = img.exifTagNameToID['XResolution']!;
 final tagYResolution = img.exifTagNameToID['YResolution']!;
@@ -19,8 +18,7 @@ final permissionServiceProvider = Provider((ref) => PermissionService());
 final fileSystemServiceProvider = Provider((ref) => FileSystemService());
 
 /// Provider to make the ImageResizeViewModel available to the UI.
-final imageResizeViewModelProvider =
-    NotifierProvider<ImageResizeViewModel, ImageResizeState>(
+final imageResizeViewModelProvider = NotifierProvider<ImageResizeViewModel, ImageResizeState>(
   ImageResizeViewModel.new,
 );
 
@@ -110,9 +108,10 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
   }
 
   Future<void> pickFromCloud() async {
-    final result = await FilePicker.platform.pickFiles(
+    final result = await FilePicker.pickFiles(
       allowMultiple: true,
       type: FileType.custom,
+      //initialDirectory: imageFile.path,
       allowedExtensions: [
         'jpg',
         'jpeg',
@@ -195,6 +194,8 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
     }
 
     String? savePath = state.saveDirectory;
+    print(savePath);
+
     if (savePath == null) {
       final defaultDownloads = await fileSystemService.getDownloadsDirectoryPath();
       if (defaultDownloads != null) {
@@ -211,6 +212,7 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
 
     if (await permissionService.requestStoragePermission()) {
       state = state.copyWith(isResizing: true, overwriteAll: false); // Reset overwriteAll
+      print('inside if (await permissionService.requestStoragePermission()) ');
 
       for (final imageFile in state.selectedImages) {
         final newFileName = fileSystemService.getNewFileName(
@@ -241,14 +243,14 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
 
         // To handle overwrite, explicitly delete if we decide to overwrite.
         if (state.overwriteAll && await File(newPath).exists()) {
-             try {
-                await File(newPath).delete();
-              } catch (e) {
+          try {
+            await File(newPath).delete();
+          } catch (e) {
             state = state.copyWith(
               snackbarMessage: 'Error: Could not delete existing file for overwrite: $e',
             );
-                continue; // Skip this image if deletion fails
-              }
+            continue; // Skip this image if deletion fails
+          }
         }
 
         final image = img.decodeImage(await imageFile.readAsBytes());
@@ -265,6 +267,7 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
           imageData: originalBytes,
           newWidth: width,
           newHeight: height,
+          newResolution: int.tryParse(state.resolution) ?? 72,
         );
 
         final resizedImage = img.decodeImage(resizedBytes);
@@ -311,15 +314,17 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
 
   // Helper for selectSaveDirectory
   Future<String?> selectSaveDirectory() async {
-     final result = await FilePicker.platform.getDirectoryPath(
+    final result = await FilePicker.getDirectoryPath(
       initialDirectory: state.saveDirectory,
     );
+    print(result);
     if (result != null) {
       state = state.copyWith(saveDirectory: result);
       return result;
     }
     return null;
   }
+
   // endregion
   (int, int) _calculatePixelDimensions() {
     if (state.firstImage == null) return (0, 0);
@@ -363,7 +368,6 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
       }
     }
   }
-
 
   //endregion
 }

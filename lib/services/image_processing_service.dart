@@ -25,12 +25,12 @@ class ImageProcessingService {
     required Uint8List imageData,
     required int newWidth,
     required int newHeight,
+    required int newResolution,
   }) async {
     // TODO: Implement actual image resizing logic using a library like 'image'.
     // For now, we'll just return the original data after a short delay.
-    print('--- Resizing image to ${newWidth}x$newHeight (placeholder) ---');
+    print('--- Resizing image to ${newWidth}x$newHeight @ ${newResolution}dpi (placeholder) ---');
     await Future.delayed(const Duration(seconds: 1)); // Simulate processing time.
     return imageData;
   }
 }
-
