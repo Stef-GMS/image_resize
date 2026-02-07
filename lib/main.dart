@@ -12,17 +12,17 @@ void main() async {
     WidgetsFlutterBinding.ensureInitialized();
     await windowManager.ensureInitialized();
 
-    // await windowManager.setMinimumSize(const Size(409, 800));
+    await windowManager.setMinimumSize(const Size(409, 800));
+    await windowManager.setMaximumSize(const Size(618, 2200));
+    await windowManager.setSize(const Size(409, 800));
+    // await windowManager.setAspectRatio(0.54);
+    await windowManager.setMaximizable(false);
+
+    // await windowManager.setMinimumSize(const Size(800, 800));
     // await windowManager.setMaximumSize(const Size(618, 1200));
-    // await windowManager.setSize(const Size(409, 800));
+    // await windowManager.setSize(const Size(800, 800));
     // await windowManager.setAspectRatio(0.54);
     // await windowManager.setMaximizable(false);
-
-    await windowManager.setMinimumSize(const Size(800, 800));
-    await windowManager.setMaximumSize(const Size(618, 1200));
-    await windowManager.setSize(const Size(800, 800));
-    await windowManager.setAspectRatio(0.54);
-    await windowManager.setMaximizable(false);
 
     await windowManager.setTitle('Image Resize'); //Window title
   }
