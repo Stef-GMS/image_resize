@@ -68,6 +68,17 @@ class SourceSection extends ConsumerWidget {
             const SizedBox(height: 16),
             Row(
               children: [
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: notifier.clearImageSelections,
+                    style: ElevatedButton.styleFrom(
+                      foregroundColor: theme.colorScheme.error,
+                      backgroundColor: theme.colorScheme.error.withAlpha(25),
+                    ),
+                    child: const Text('Clear'),
+                  ),
+                ),
+                const SizedBox(width: 16),
                 Checkbox(
                   value: state.resetOptionsOnClear,
                   onChanged: (value) => notifier.setResetOptionsOnClear(value ?? true),
@@ -77,17 +88,6 @@ class SourceSection extends ConsumerWidget {
                   child: Text(
                     'Reset Options',
                     style: theme.textTheme.bodyMedium,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: notifier.clearImageSelections,
-                    style: ElevatedButton.styleFrom(
-                      foregroundColor: theme.colorScheme.error,
-                      backgroundColor: theme.colorScheme.error.withAlpha(25),
-                    ),
-                    child: const Text('Clear'),
                   ),
                 ),
               ],
