@@ -126,6 +126,10 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
     state = state.copyWith(includeExif: value);
   }
 
+  void setResetOptionsOnClear(bool value) {
+    state = state.copyWith(resetOptionsOnClear: value);
+  }
+
   void setOutputFormat(ImageResizeOutputFormat format) {
     state = state.copyWith(outputFormat: format);
   }
@@ -228,20 +232,25 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
   }
 
   void clearImageSelections() {
-    state = state.copyWith(
-      selectedImages: [],
-      originalFileNames: {},
-      saveDirectory: null,
-      saveDestination: SaveDestination.deviceFileSystem,
-      aspectRatio: null,
-      firstImage: null,
-      width: '',
-      height: '',
-      suffix: '',
-      userEditedSuffix: false,
-      resizedImagesData: null,
-      hasResized: false,
-    );
+    if (state.resetOptionsOnClear) {
+      // Reset everything to initial state
+      state = ImageResizeState.initial();
+    } else {
+      // Only clear images and related fields, keep user settings
+      state = state.copyWith(
+        selectedImages: [],
+        originalFileNames: {},
+        aspectRatio: null,
+        firstImage: null,
+        width: '',
+        height: '',
+        suffix: '',
+        userEditedSuffix: false,
+        baseFilename: '',
+        resizedImagesData: null,
+        hasResized: false,
+      );
+    }
   }
   // endregion
 
