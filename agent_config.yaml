@@ -1,0 +1,12 @@
+auto_execution:
+  enabled: true
+  whitelist:
+    - pattern: "^flutter (pub get|clean|analyze)$"
+    - pattern: "^dart format"
+    - pattern: "^git add"
+    - pattern: "^git commit"
+  blacklist:
+    - pattern: ".*rm -rf.*"
+    - pattern: ".*delete.*"
+    - pattern: "^git push"
+    - pattern: "^git reset --hard"
