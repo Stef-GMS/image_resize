@@ -39,6 +39,15 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
   // region State Update Methods
   void setDimensionType(DimensionUnitType type) {
     state = state.copyWith(dimensionType: type);
+
+    // When switching to percentage, set default to 100%
+    if (type == DimensionUnitType.percent && state.firstImage != null) {
+      state = state.copyWith(
+        width: '100',
+        height: '100',
+      );
+    }
+
     _updateSuffix();
   }
 
@@ -52,8 +61,12 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
       if (value.isNotEmpty) {
         final width = double.tryParse(value);
         if (width != null) {
-          final height = (width / state.aspectRatio!).round();
-          state = state.copyWith(height: height.toString());
+          // For percentage, both width and height should be the same value
+          // For other units, calculate based on aspect ratio
+          final height = state.dimensionType == DimensionUnitType.percent
+              ? width
+              : (width / state.aspectRatio!);
+          state = state.copyWith(height: height.round().toString());
         }
       } else {
         // Clear height when width is cleared
@@ -69,8 +82,12 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
       if (value.isNotEmpty) {
         final height = double.tryParse(value);
         if (height != null) {
-          final width = (height * state.aspectRatio!).round();
-          state = state.copyWith(width: width.toString());
+          // For percentage, both width and height should be the same value
+          // For other units, calculate based on aspect ratio
+          final width = state.dimensionType == DimensionUnitType.percent
+              ? height
+              : (height * state.aspectRatio!);
+          state = state.copyWith(width: width.round().toString());
         }
       } else {
         // Clear width when height is cleared
