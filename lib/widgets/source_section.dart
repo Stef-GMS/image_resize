@@ -66,16 +66,31 @@ class SourceSection extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: notifier.clearImageSelections,
-                style: ElevatedButton.styleFrom(
-                  foregroundColor: theme.colorScheme.error,
-                  backgroundColor: theme.colorScheme.error.withAlpha(25),
+            Row(
+              children: [
+                Checkbox(
+                  value: state.resetOptionsOnClear,
+                  onChanged: (value) => notifier.setResetOptionsOnClear(value ?? true),
                 ),
-                child: const Text('Clear'),
-              ),
+                GestureDetector(
+                  onTap: () => notifier.setResetOptionsOnClear(!state.resetOptionsOnClear),
+                  child: Text(
+                    'Reset Options',
+                    style: theme.textTheme.bodyMedium,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: notifier.clearImageSelections,
+                    style: ElevatedButton.styleFrom(
+                      foregroundColor: theme.colorScheme.error,
+                      backgroundColor: theme.colorScheme.error.withAlpha(25),
+                    ),
+                    child: const Text('Clear'),
+                  ),
+                ),
+              ],
             ),
           ],
         ],

@@ -30,6 +30,7 @@ class ImageResizeState {
   final String? saveDirectory;
   final bool isResizing;
   final bool overwriteAll;
+  final bool resetOptionsOnClear;
   final String? snackbarMessage;
   final bool hasResized;
   final List<Uint8List>? resizedImagesData;
@@ -55,6 +56,7 @@ class ImageResizeState {
     this.saveDirectory,
     required this.isResizing,
     required this.overwriteAll,
+    required this.resetOptionsOnClear,
     this.snackbarMessage,
     required this.hasResized,
     this.resizedImagesData,
@@ -82,6 +84,7 @@ class ImageResizeState {
     saveDirectory: null,
     isResizing: false,
     overwriteAll: false,
+    resetOptionsOnClear: true,
     snackbarMessage: null,
     hasResized: false,
     resizedImagesData: null,
@@ -108,6 +111,7 @@ class ImageResizeState {
     String? saveDirectory,
     bool? isResizing,
     bool? overwriteAll,
+    bool? resetOptionsOnClear,
     String? snackbarMessage,
     bool? hasResized,
     List<Uint8List>? resizedImagesData,
@@ -133,6 +137,7 @@ class ImageResizeState {
       saveDirectory: saveDirectory ?? this.saveDirectory,
       isResizing: isResizing ?? this.isResizing,
       overwriteAll: overwriteAll ?? this.overwriteAll,
+      resetOptionsOnClear: resetOptionsOnClear ?? this.resetOptionsOnClear,
       snackbarMessage: snackbarMessage ?? this.snackbarMessage,
       hasResized: hasResized ?? this.hasResized,
       resizedImagesData: resizedImagesData ?? this.resizedImagesData,
@@ -164,6 +169,7 @@ class ImageResizeState {
           saveDirectory == other.saveDirectory &&
           isResizing == other.isResizing &&
           overwriteAll == other.overwriteAll &&
+          resetOptionsOnClear == other.resetOptionsOnClear &&
           snackbarMessage == other.snackbarMessage &&
           hasResized == other.hasResized &&
           listEquals(resizedImagesData, other.resizedImagesData);
@@ -190,6 +196,7 @@ class ImageResizeState {
       saveDirectory.hashCode ^
       isResizing.hashCode ^
       overwriteAll.hashCode ^
+      resetOptionsOnClear.hashCode ^
       snackbarMessage.hashCode ^
       hasResized.hashCode ^
       resizedImagesData.hashCode;
