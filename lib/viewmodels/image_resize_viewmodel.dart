@@ -243,7 +243,19 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
     if (image != null) {
       final exifData = image.exif;
       final xResolution = exifData.getTag(tagXResolution);
-      final resolution = xResolution?.toInt().toString() ?? '72';
+
+      // EXIF resolution is stored as a rational number (e.g., 300/1)
+      // Convert to double first, then to int to get the actual DPI value
+      String resolution = '72';
+      if (xResolution != null) {
+        try {
+          final dpiValue = xResolution.toDouble().round();
+          resolution = dpiValue.toString();
+        } catch (e) {
+          // Fallback to default if conversion fails
+          resolution = '72';
+        }
+      }
 
       // Only reset dimensions if resetOptionsOnClear is true
       // Otherwise, keep the user's current dimension values
@@ -281,16 +293,12 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
       // Reset everything to initial state
       state = ImageResizeState.initial();
     } else {
-      // Only clear images and related fields, keep user settings
+      // Only clear images and related fields, keep user settings (width, height, dimension type, etc.)
       state = state.copyWith(
         selectedImages: [],
         originalFileNames: {},
         aspectRatio: null,
         firstImage: null,
-        width: '',
-        height: '',
-        suffix: '',
-        userEditedSuffix: false,
         baseFilename: '',
         resizedImagesData: null,
         hasResized: false,
