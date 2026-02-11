@@ -41,11 +41,19 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
     state = state.copyWith(dimensionType: type);
 
     // When switching to percentage, set default to 100%
-    if (type == DimensionUnitType.percent && state.firstImage != null) {
-      state = state.copyWith(
-        width: '100',
-        height: '100',
-      );
+    // When switching to pixels, restore original dimensions
+    if (state.firstImage != null) {
+      if (type == DimensionUnitType.percent) {
+        state = state.copyWith(
+          width: '100',
+          height: '100',
+        );
+      } else if (type == DimensionUnitType.pixels) {
+        state = state.copyWith(
+          width: state.firstImage!.width.toString(),
+          height: state.firstImage!.height.toString(),
+        );
+      }
     }
 
     _updateSuffix();
@@ -343,8 +351,6 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
           imageFile.path,
           originalFileName,
           state.baseFilename.isNotEmpty ? state.baseFilename : null,
-          pixelWidth,
-          pixelHeight,
           state.suffix,
           state.outputFormat,
         );
