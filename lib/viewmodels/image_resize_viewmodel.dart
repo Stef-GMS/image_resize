@@ -40,19 +40,52 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
   void setDimensionType(DimensionUnitType type) {
     state = state.copyWith(dimensionType: type);
 
-    // When switching to percentage, set default to 100%
-    // When switching to pixels, restore original dimensions
+    // When switching dimension types, set appropriate default values
     if (state.firstImage != null) {
-      if (type == DimensionUnitType.percent) {
-        state = state.copyWith(
-          width: '100',
-          height: '100',
-        );
-      } else if (type == DimensionUnitType.pixels) {
-        state = state.copyWith(
-          width: state.firstImage!.width.toString(),
-          height: state.firstImage!.height.toString(),
-        );
+      final resolution = int.tryParse(state.resolution) ?? 72;
+
+      switch (type) {
+        case DimensionUnitType.percent:
+          // Set to 100%
+          state = state.copyWith(
+            width: '100',
+            height: '100',
+          );
+          break;
+        case DimensionUnitType.pixels:
+          // Restore original pixel dimensions
+          state = state.copyWith(
+            width: state.firstImage!.width.toString(),
+            height: state.firstImage!.height.toString(),
+          );
+          break;
+        case DimensionUnitType.inches:
+          // Convert pixels to inches
+          final widthInches = (state.firstImage!.width / resolution).toStringAsFixed(2);
+          final heightInches = (state.firstImage!.height / resolution).toStringAsFixed(2);
+          state = state.copyWith(
+            width: widthInches,
+            height: heightInches,
+          );
+          break;
+        case DimensionUnitType.cm:
+          // Convert pixels to cm (1 inch = 2.54 cm)
+          final widthCm = (state.firstImage!.width / resolution * 2.54).toStringAsFixed(2);
+          final heightCm = (state.firstImage!.height / resolution * 2.54).toStringAsFixed(2);
+          state = state.copyWith(
+            width: widthCm,
+            height: heightCm,
+          );
+          break;
+        case DimensionUnitType.mm:
+          // Convert pixels to mm (1 inch = 25.4 mm)
+          final widthMm = (state.firstImage!.width / resolution * 25.4).toStringAsFixed(2);
+          final heightMm = (state.firstImage!.height / resolution * 25.4).toStringAsFixed(2);
+          state = state.copyWith(
+            width: widthMm,
+            height: heightMm,
+          );
+          break;
       }
     }
 
@@ -212,14 +245,26 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
       final xResolution = exifData.getTag(tagXResolution);
       final resolution = xResolution?.toInt().toString() ?? '72';
 
-      state = state.copyWith(
-        firstImage: image,
-        aspectRatio: image.width / image.height,
-        width: image.width.toString(),
-        height: image.height.toString(),
-        resolution: resolution,
-        userEditedSuffix: false,
-      );
+      // Only reset dimensions if resetOptionsOnClear is true
+      // Otherwise, keep the user's current dimension values
+      if (state.resetOptionsOnClear) {
+        state = state.copyWith(
+          firstImage: image,
+          aspectRatio: image.width / image.height,
+          width: image.width.toString(),
+          height: image.height.toString(),
+          resolution: resolution,
+          userEditedSuffix: false,
+        );
+      } else {
+        // Keep current width/height values, only update image and aspect ratio
+        state = state.copyWith(
+          firstImage: image,
+          aspectRatio: image.width / image.height,
+          resolution: resolution,
+          userEditedSuffix: false,
+        );
+      }
       _updateSuffix();
     }
 
