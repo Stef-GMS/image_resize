@@ -2,14 +2,17 @@ import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:gal/gal.dart';
 import 'package:image/image.dart' as img;
 import 'package:image_picker/image_picker.dart';
 import 'package:image_resize/models/dimension_unit_type.dart';
 import 'package:image_resize/models/image_resize_output_format.dart';
 import 'package:image_resize/models/image_resize_state.dart';
+import 'package:image_resize/models/save_destination.dart';
 import 'package:image_resize/services/file_system_service.dart';
 import 'package:image_resize/services/image_processing_service.dart';
 import 'package:image_resize/services/permission_service.dart';
+import 'package:path_provider/path_provider.dart';
 
 final tagXResolution = img.exifTagNameToID['XResolution']!;
 final tagYResolution = img.exifTagNameToID['YResolution']!;
@@ -45,11 +48,16 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
 
   void setWidth(String value) {
     state = state.copyWith(width: value);
-    if (state.maintainAspectRatio && state.aspectRatio != null && value.isNotEmpty) {
-      final width = double.tryParse(value);
-      if (width != null) {
-        final height = (width / state.aspectRatio!).round();
-        state = state.copyWith(height: height.toString());
+    if (state.maintainAspectRatio && state.aspectRatio != null) {
+      if (value.isNotEmpty) {
+        final width = double.tryParse(value);
+        if (width != null) {
+          final height = (width / state.aspectRatio!).round();
+          state = state.copyWith(height: height.toString());
+        }
+      } else {
+        // Clear height when width is cleared
+        state = state.copyWith(height: '');
       }
     }
     _updateSuffix();
@@ -57,11 +65,16 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
 
   void setHeight(String value) {
     state = state.copyWith(height: value);
-    if (state.maintainAspectRatio && state.aspectRatio != null && value.isNotEmpty) {
-      final height = double.tryParse(value);
-      if (height != null) {
-        final width = (height * state.aspectRatio!).round();
-        state = state.copyWith(width: width.toString());
+    if (state.maintainAspectRatio && state.aspectRatio != null) {
+      if (value.isNotEmpty) {
+        final height = double.tryParse(value);
+        if (height != null) {
+          final width = (height * state.aspectRatio!).round();
+          state = state.copyWith(width: width.toString());
+        }
+      } else {
+        // Clear width when height is cleared
+        state = state.copyWith(width: '');
       }
     }
     _updateSuffix();
@@ -92,6 +105,14 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
     state = state.copyWith(outputFormat: format);
   }
 
+  void setSaveDestination(SaveDestination destination) {
+    state = state.copyWith(saveDestination: destination);
+  }
+
+  void setBaseFilename(String value) {
+    state = state.copyWith(baseFilename: value);
+  }
+
   void dismissSnackbar() {
     state = state.copyWith(snackbarMessage: null);
   }
@@ -103,7 +124,23 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
     final pickedFiles = await imagePicker.pickMultiImage();
 
     if (pickedFiles.isNotEmpty) {
-      await _processPickedFiles(pickedFiles.map((f) => f.path).toList());
+      // Create a map of temp paths to simplified filenames
+      // Since image_picker doesn't preserve original filenames on iOS,
+      // we'll use a sequential naming pattern
+      final originalNames = <String, String>{};
+      int counter = 1;
+      for (final file in pickedFiles) {
+        // Extract the file extension from the temp file
+        final extension = file.path.split('.').last;
+        // Create a simple filename like IMG_0001.jpg, IMG_0002.jpg, etc.
+        final simpleName = 'IMG_${counter.toString().padLeft(4, '0')}.$extension';
+        originalNames[file.path] = simpleName;
+        counter++;
+      }
+      await _processPickedFiles(
+        pickedFiles.map((f) => f.path).toList(),
+        originalNames,
+      );
     }
   }
 
@@ -122,11 +159,21 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
       ],
     );
     if (result != null && result.files.isNotEmpty) {
-      await _processPickedFiles(result.paths.where((p) => p != null).cast<String>().toList());
+      // Create a map of paths to original filenames
+      final originalNames = <String, String>{};
+      for (final file in result.files) {
+        if (file.path != null) {
+          originalNames[file.path!] = file.name;
+        }
+      }
+      await _processPickedFiles(
+        result.paths.where((p) => p != null).cast<String>().toList(),
+        originalNames,
+      );
     }
   }
 
-  Future<void> _processPickedFiles(List<String> paths) async {
+  Future<void> _processPickedFiles(List<String> paths, [Map<String, String>? originalNames]) async {
     final firstImageFile = File(paths.first);
     final fileBytes = await firstImageFile.readAsBytes();
     final image = img.decodeImage(fileBytes);
@@ -149,14 +196,18 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
 
     state = state.copyWith(
       selectedImages: [...state.selectedImages, ...paths.map((p) => File(p))],
+      originalFileNames: {...state.originalFileNames, ...?originalNames},
       saveDirectory: File(paths.first).parent.path,
+      baseFilename: '', // Clear base filename when picking new images
     );
   }
 
   void clearImageSelections() {
     state = state.copyWith(
       selectedImages: [],
+      originalFileNames: {},
       saveDirectory: null,
+      saveDestination: SaveDestination.deviceFileSystem,
       aspectRatio: null,
       firstImage: null,
       width: '',
@@ -193,100 +244,122 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
       return;
     }
 
-    String? savePath = state.saveDirectory;
-    //print('Save path from state: $savePath');
+    final saveToPhotos = state.saveDestination == SaveDestination.devicePhotos;
 
-    // If no save directory is set, try to get a default one
-    if (savePath == null || savePath.isEmpty) {
-      final defaultDownloads = await fileSystemService.getDownloadsDirectoryPath();
-      if (defaultDownloads != null) {
-        savePath = defaultDownloads;
-        // Update state with the default directory
-        state = state.copyWith(saveDirectory: savePath);
-      } else {
-        final selectedPath = await selectSaveDirectory();
-        savePath = selectedPath;
-        if (savePath == null) {
-          state = state.copyWith(snackbarMessage: 'Please select a save directory.');
+    // On macOS, if trying to save to Photos, block it due to known crash issue
+    if (Platform.isMacOS && saveToPhotos) {
+      state = state.copyWith(
+        snackbarMessage:
+            'Saving to Photos app is not supported on macOS due to a Flutter limitation. Please choose "Device File System" or "Cloud" instead.',
+      );
+      return;
+    }
+
+    // For file system / cloud saving, resolve the save path
+    String? savePath;
+    if (!saveToPhotos) {
+      savePath = state.saveDirectory;
+
+      // If no save directory is set, try to get a default one
+      if (savePath == null || savePath.isEmpty) {
+        final defaultDownloads = await fileSystemService.getDownloadsDirectoryPath();
+        if (defaultDownloads != null) {
+          savePath = defaultDownloads;
+          state = state.copyWith(saveDirectory: savePath);
+        } else {
+          final selectedPath = await selectSaveDirectory();
+          savePath = selectedPath;
+          if (savePath == null) {
+            state = state.copyWith(snackbarMessage: 'Please select a save directory.');
+            return;
+          }
+        }
+      }
+
+      // Verify the directory exists and is writable
+      final saveDir = Directory(savePath);
+      if (!await saveDir.exists()) {
+        try {
+          await saveDir.create(recursive: true);
+        } catch (e) {
+          state = state.copyWith(snackbarMessage: 'Error: Cannot access save directory: $e');
           return;
         }
       }
-    }
 
-    // Verify the directory exists and is writable
-    final saveDir = Directory(savePath);
-    if (!await saveDir.exists()) {
+      // Test if we can write to this directory (important for sandboxed apps and iCloud)
       try {
-        await saveDir.create(recursive: true);
+        final testFile = File('$savePath/.test_write_${DateTime.now().millisecondsSinceEpoch}');
+        await testFile.writeAsString('test');
+        await testFile.delete();
       } catch (e) {
-        state = state.copyWith(snackbarMessage: 'Error: Cannot access save directory: $e');
-        return;
-      }
-    }
-
-    // Test if we can write to this directory (important for sandboxed apps and iCloud)
-    try {
-      final testFile = File('$savePath/.test_write_${DateTime.now().millisecondsSinceEpoch}');
-      await testFile.writeAsString('test');
-      await testFile.delete();
-      //print('Save directory is writable: $savePath');
-    } catch (e) {
-      //print('Cannot write to directory: $savePath, error: $e');
-      // Ask user to select a writable directory
-      state = state.copyWith(
-        snackbarMessage: 'Cannot save to this location. Please choose a save folder.',
-      );
-      final selectedPath = await selectSaveDirectory();
-      if (selectedPath == null) {
         state = state.copyWith(
-          snackbarMessage: 'Please select a save directory.',
-          isResizing: false,
+          snackbarMessage: 'Cannot save to this location. Please choose a save folder.',
         );
-        return;
+        final selectedPath = await selectSaveDirectory();
+        if (selectedPath == null) {
+          state = state.copyWith(
+            snackbarMessage: 'Please select a save directory.',
+            isResizing: false,
+          );
+          return;
+        }
+        savePath = selectedPath;
       }
-      savePath = selectedPath;
     }
 
-    if (await permissionService.requestStoragePermission()) {
-      state = state.copyWith(isResizing: true, overwriteAll: false); // Reset overwriteAll
-      //print('inside if (await permissionService.requestStoragePermission()) ');
+    // Request appropriate permission based on save destination
+    final hasPermission = saveToPhotos
+        ? await permissionService.requestPhotoLibraryPermission()
+        : await permissionService.requestStoragePermission();
+
+    if (hasPermission) {
+      state = state.copyWith(isResizing: true, overwriteAll: false);
+
+      // Calculate actual pixel dimensions based on unit type
+      final (pixelWidth, pixelHeight) = _calculatePixelDimensions();
 
       for (final imageFile in state.selectedImages) {
+        // Get original filename if available (for images picked from device photos)
+        final originalFileName = state.originalFileNames[imageFile.path];
         final newFileName = fileSystemService.getNewFileName(
           imageFile.path,
-          widthInput.round(),
-          heightInput.round(),
+          originalFileName,
+          state.baseFilename.isNotEmpty ? state.baseFilename : null,
+          pixelWidth,
+          pixelHeight,
           state.suffix,
           state.outputFormat,
         );
-        final newPath = '$savePath/$newFileName';
 
-        final parentDir = File(newPath).parent;
-        if (!await parentDir.exists()) {
-          try {
-            await parentDir.create(recursive: true);
-          } catch (e) {
-            state = state.copyWith(snackbarMessage: 'Error: Could not create save directory: $e');
-            continue; // Skip this image if directory can't be created
+        // File system overwrite checks (only for non-photo-library saving)
+        if (!saveToPhotos && savePath != null) {
+          final newPath = '$savePath/$newFileName';
+
+          final parentDir = File(newPath).parent;
+          if (!await parentDir.exists()) {
+            try {
+              await parentDir.create(recursive: true);
+            } catch (e) {
+              state = state.copyWith(snackbarMessage: 'Error: Could not create save directory: $e');
+              continue;
+            }
           }
-        }
 
-        // Overwrite logic - for now, if file exists and not overwriteAll, then skip.
-        // Dialog handling is in UI.
-        if (!state.overwriteAll && await File(newPath).exists()) {
-          state = state.copyWith(snackbarMessage: 'File $newFileName already exists. Skipping.');
-          continue;
-        }
+          if (!state.overwriteAll && await File(newPath).exists()) {
+            state = state.copyWith(snackbarMessage: 'File $newFileName already exists. Skipping.');
+            continue;
+          }
 
-        // To handle overwrite, explicitly delete if we decide to overwrite.
-        if (state.overwriteAll && await File(newPath).exists()) {
-          try {
-            await File(newPath).delete();
-          } catch (e) {
-            state = state.copyWith(
-              snackbarMessage: 'Error: Could not delete existing file for overwrite: $e',
-            );
-            continue; // Skip this image if deletion fails
+          if (state.overwriteAll && await File(newPath).exists()) {
+            try {
+              await File(newPath).delete();
+            } catch (e) {
+              state = state.copyWith(
+                snackbarMessage: 'Error: Could not delete existing file for overwrite: $e',
+              );
+              continue;
+            }
           }
         }
 
@@ -296,14 +369,12 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
           continue;
         }
 
-        final (width, height) = _calculatePixelDimensions();
-
-        final originalBytes = await imageFile.readAsBytes(); // Re-read for service
+        final originalBytes = await imageFile.readAsBytes();
 
         final resizedBytes = await imageProcessingService.resizeImage(
           imageData: originalBytes,
-          newWidth: width,
-          newHeight: height,
+          newWidth: pixelWidth,
+          newHeight: pixelHeight,
           newResolution: int.tryParse(state.resolution) ?? 72,
         );
 
@@ -335,16 +406,57 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
             filter: img.PngFilter.paeth,
             level: 6,
             pixelDimensions: img.PngPhysicalPixelDimensions.dpi(resolution),
-          ).encode(resizedImage); // Use resizedImage here
+          ).encode(resizedImage);
         }
 
-        await File(newPath).writeAsBytes(encodedImage);
+        // Save based on destination
+        if (saveToPhotos) {
+          // gal requires a file path, so write to temp first
+          final tempDir = await getTemporaryDirectory();
+          final tempPath = '${tempDir.path}/$newFileName';
+          await File(tempPath).writeAsBytes(encodedImage);
+
+          try {
+            await Gal.putImage(tempPath);
+          } catch (e) {
+            // On macOS, Flutter has a known issue loading Info.plist which can
+            // cause gal to crash. Prompt user to choose a different save location.
+            if (Platform.isMacOS) {
+              // Clean up temp file
+              try {
+                await File(tempPath).delete();
+              } catch (_) {}
+
+              state = state.copyWith(
+                isResizing: false,
+                snackbarMessage:
+                    'Unable to save to Photos app. Please choose a different save location.',
+              );
+              return;
+            } else {
+              rethrow;
+            }
+          }
+
+          // Clean up temp file
+          try {
+            await File(tempPath).delete();
+          } catch (_) {}
+        } else {
+          final newPath = '$savePath/$newFileName';
+          await File(newPath).writeAsBytes(encodedImage);
+        }
       }
+
+      final successMessage = saveToPhotos
+          ? 'Images resized and saved to Photo Library'
+          : 'Images resized and saved to $savePath';
+
       state = state.copyWith(
         isResizing: false,
-        hasResized: false, // Reset hasResized after saving
+        hasResized: false,
         resizedImagesData: null,
-        snackbarMessage: 'Images resized and saved to $savePath',
+        snackbarMessage: successMessage,
       );
     }
   }

@@ -12,6 +12,7 @@ import file_selector_macos
 import flutter_inappwebview_macos
 import flutter_secure_storage_macos
 import flutter_web_auth_2
+import gal
 import google_sign_in_ios
 import icloud_storage_sync
 import path_provider_foundation
@@ -29,6 +30,7 @@ func RegisterGeneratedPlugins(registry: FlutterPluginRegistry) {
   InAppWebViewFlutterPlugin.register(with: registry.registrar(forPlugin: "InAppWebViewFlutterPlugin"))
   FlutterSecureStoragePlugin.register(with: registry.registrar(forPlugin: "FlutterSecureStoragePlugin"))
   FlutterWebAuth2Plugin.register(with: registry.registrar(forPlugin: "FlutterWebAuth2Plugin"))
+  GalPlugin.register(with: registry.registrar(forPlugin: "GalPlugin"))
   FLTGoogleSignInPlugin.register(with: registry.registrar(forPlugin: "FLTGoogleSignInPlugin"))
   IcloudStorageSyncPlugin.register(with: registry.registrar(forPlugin: "IcloudStorageSyncPlugin"))
   PathProviderPlugin.register(with: registry.registrar(forPlugin: "PathProviderPlugin"))

@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:image/image.dart' as img;
 import 'package:image_resize/models/dimension_unit_type.dart';
 import 'package:image_resize/models/image_resize_output_format.dart';
+import 'package:image_resize/models/save_destination.dart';
 
 /// Represents the state of the ImageResizeScreen.
 /// This is a standard immutable class, written manually.
@@ -13,7 +14,9 @@ class ImageResizeState {
   final String height;
   final String resolution;
   final String suffix;
+  final String baseFilename;
   final List<File> selectedImages;
+  final Map<String, String> originalFileNames; // Maps temp path to original filename
   final double? aspectRatio;
   final img.Image? firstImage;
   final bool scaleProportionally;
@@ -23,6 +26,7 @@ class ImageResizeState {
   final bool userEditedSuffix;
   final ImageResizeOutputFormat outputFormat;
   final DimensionUnitType dimensionType;
+  final SaveDestination saveDestination;
   final String? saveDirectory;
   final bool isResizing;
   final bool overwriteAll;
@@ -35,7 +39,9 @@ class ImageResizeState {
     required this.height,
     required this.resolution,
     required this.suffix,
+    required this.baseFilename,
     required this.selectedImages,
+    required this.originalFileNames,
     this.aspectRatio,
     this.firstImage,
     required this.scaleProportionally,
@@ -45,6 +51,7 @@ class ImageResizeState {
     required this.userEditedSuffix,
     required this.outputFormat,
     required this.dimensionType,
+    required this.saveDestination,
     this.saveDirectory,
     required this.isResizing,
     required this.overwriteAll,
@@ -55,34 +62,39 @@ class ImageResizeState {
 
   /// Creates the initial state for the image resize screen.
   factory ImageResizeState.initial() => const ImageResizeState(
-        width: '',
-        height: '',
-        resolution: '72',
-        suffix: '',
-        selectedImages: [],
-        aspectRatio: null,
-        firstImage: null,
-        scaleProportionally: true,
-        resampleImage: true,
-        maintainAspectRatio: true,
-        includeExif: true,
-        userEditedSuffix: false,
-        outputFormat: ImageResizeOutputFormat.sameAsOriginal,
-        dimensionType: DimensionUnitType.pixels,
-        saveDirectory: null,
-        isResizing: false,
-        overwriteAll: false,
-        snackbarMessage: null,
-        hasResized: false,
-        resizedImagesData: null,
-      );
+    width: '',
+    height: '',
+    resolution: '72',
+    suffix: '',
+    baseFilename: '',
+    selectedImages: [],
+    originalFileNames: {},
+    aspectRatio: null,
+    firstImage: null,
+    scaleProportionally: true,
+    resampleImage: true,
+    maintainAspectRatio: true,
+    includeExif: true,
+    userEditedSuffix: false,
+    outputFormat: ImageResizeOutputFormat.sameAsOriginal,
+    dimensionType: DimensionUnitType.pixels,
+    saveDestination: SaveDestination.deviceFileSystem,
+    saveDirectory: null,
+    isResizing: false,
+    overwriteAll: false,
+    snackbarMessage: null,
+    hasResized: false,
+    resizedImagesData: null,
+  );
 
   ImageResizeState copyWith({
     String? width,
     String? height,
     String? resolution,
     String? suffix,
+    String? baseFilename,
     List<File>? selectedImages,
+    Map<String, String>? originalFileNames,
     double? aspectRatio,
     img.Image? firstImage,
     bool? scaleProportionally,
@@ -92,6 +104,7 @@ class ImageResizeState {
     bool? userEditedSuffix,
     ImageResizeOutputFormat? outputFormat,
     DimensionUnitType? dimensionType,
+    SaveDestination? saveDestination,
     String? saveDirectory,
     bool? isResizing,
     bool? overwriteAll,
@@ -104,7 +117,9 @@ class ImageResizeState {
       height: height ?? this.height,
       resolution: resolution ?? this.resolution,
       suffix: suffix ?? this.suffix,
+      baseFilename: baseFilename ?? this.baseFilename,
       selectedImages: selectedImages ?? this.selectedImages,
+      originalFileNames: originalFileNames ?? this.originalFileNames,
       aspectRatio: aspectRatio ?? this.aspectRatio,
       firstImage: firstImage ?? this.firstImage,
       scaleProportionally: scaleProportionally ?? this.scaleProportionally,
@@ -114,6 +129,7 @@ class ImageResizeState {
       userEditedSuffix: userEditedSuffix ?? this.userEditedSuffix,
       outputFormat: outputFormat ?? this.outputFormat,
       dimensionType: dimensionType ?? this.dimensionType,
+      saveDestination: saveDestination ?? this.saveDestination,
       saveDirectory: saveDirectory ?? this.saveDirectory,
       isResizing: isResizing ?? this.isResizing,
       overwriteAll: overwriteAll ?? this.overwriteAll,
@@ -132,7 +148,9 @@ class ImageResizeState {
           height == other.height &&
           resolution == other.resolution &&
           suffix == other.suffix &&
+          baseFilename == other.baseFilename &&
           listEquals(selectedImages, other.selectedImages) &&
+          mapEquals(originalFileNames, other.originalFileNames) &&
           aspectRatio == other.aspectRatio &&
           firstImage == other.firstImage &&
           scaleProportionally == other.scaleProportionally &&
@@ -142,6 +160,7 @@ class ImageResizeState {
           userEditedSuffix == other.userEditedSuffix &&
           outputFormat == other.outputFormat &&
           dimensionType == other.dimensionType &&
+          saveDestination == other.saveDestination &&
           saveDirectory == other.saveDirectory &&
           isResizing == other.isResizing &&
           overwriteAll == other.overwriteAll &&
@@ -155,7 +174,9 @@ class ImageResizeState {
       height.hashCode ^
       resolution.hashCode ^
       suffix.hashCode ^
+      baseFilename.hashCode ^
       selectedImages.hashCode ^
+      originalFileNames.hashCode ^
       aspectRatio.hashCode ^
       firstImage.hashCode ^
       scaleProportionally.hashCode ^
@@ -165,6 +186,7 @@ class ImageResizeState {
       userEditedSuffix.hashCode ^
       outputFormat.hashCode ^
       dimensionType.hashCode ^
+      saveDestination.hashCode ^
       saveDirectory.hashCode ^
       isResizing.hashCode ^
       overwriteAll.hashCode ^
