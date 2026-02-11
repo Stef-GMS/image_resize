@@ -21,8 +21,6 @@ class FileSystemService {
     String oldPath,
     String? originalFileName,
     String? baseFilename,
-    int width,
-    int height,
     String suffix,
     ImageResizeOutputFormat outputFormat,
   ) {
