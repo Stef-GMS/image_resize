@@ -19,43 +19,25 @@ class FileSystemService {
 
   String getNewFileName(
     String oldPath,
-    String? originalFileName,
-    String? baseFilename,
+    int width,
+    int height,
     String suffix,
     ImageResizeOutputFormat outputFormat,
   ) {
-    // Determine the source filename
-    String sourceFileName;
-    String oldNameWithoutExtension;
-    String? oldExtension;
-
-    if (baseFilename != null && baseFilename.isNotEmpty) {
-      // User provided a custom base filename - use it as-is (no extension)
-      oldNameWithoutExtension = baseFilename;
-      // Get extension from the original file for determining output format
-      final tempFileName = originalFileName ?? oldPath.split('/').last;
-      oldExtension = tempFileName.contains('.') ? tempFileName.split('.').last : null;
-    } else {
-      // Use original filename or extract from path
-      sourceFileName = originalFileName ?? oldPath.split('/').last;
-      if (sourceFileName.contains('.')) {
-        oldExtension = sourceFileName.split('.').last;
-        oldNameWithoutExtension = sourceFileName.substring(
-          0,
-          sourceFileName.length - oldExtension.length - 1,
-        );
-      } else {
-        oldExtension = null;
-        oldNameWithoutExtension = sourceFileName;
-      }
-    }
+    final oldFileName = oldPath.split('/').last;
+    final oldExtension = oldFileName.split('.').last;
+    final oldNameWithoutExtension = oldFileName.substring(
+      0,
+      oldFileName.length - oldExtension.length - 1,
+    );
 
     String newExtension;
     if (outputFormat == ImageResizeOutputFormat.sameAsOriginal) {
-      newExtension = oldExtension?.toLowerCase() ?? 'jpg';
+      newExtension = oldExtension.toLowerCase();
     } else {
       newExtension = outputFormat.name;
     }
+    // print("New filename: $oldNameWithoutExtension$suffix.$newExtension'");
 
     return '$oldNameWithoutExtension$suffix.$newExtension';
   }

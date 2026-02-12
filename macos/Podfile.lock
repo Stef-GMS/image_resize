@@ -25,9 +25,6 @@ PODS:
   - flutter_web_auth_2 (3.0.0):
     - FlutterMacOS
   - FlutterMacOS (1.0.0)
-  - gal (1.0.0):
-    - Flutter
-    - FlutterMacOS
   - google_sign_in_ios (0.0.1):
     - AppAuth (>= 1.7.4)
     - Flutter
@@ -84,7 +81,6 @@ DEPENDENCIES:
   - flutter_secure_storage_macos (from `Flutter/ephemeral/.symlinks/plugins/flutter_secure_storage_macos/macos`)
   - flutter_web_auth_2 (from `Flutter/ephemeral/.symlinks/plugins/flutter_web_auth_2/macos`)
   - FlutterMacOS (from `Flutter/ephemeral`)
-  - gal (from `Flutter/ephemeral/.symlinks/plugins/gal/darwin`)
   - google_sign_in_ios (from `Flutter/ephemeral/.symlinks/plugins/google_sign_in_ios/darwin`)
   - icloud_storage_sync (from `Flutter/ephemeral/.symlinks/plugins/icloud_storage_sync/macos`)
   - path_provider_foundation (from `Flutter/ephemeral/.symlinks/plugins/path_provider_foundation/darwin`)
@@ -122,8 +118,6 @@ EXTERNAL SOURCES:
     :path: Flutter/ephemeral/.symlinks/plugins/flutter_web_auth_2/macos
   FlutterMacOS:
     :path: Flutter/ephemeral
-  gal:
-    :path: Flutter/ephemeral/.symlinks/plugins/gal/darwin
   google_sign_in_ios:
     :path: Flutter/ephemeral/.symlinks/plugins/google_sign_in_ios/darwin
   icloud_storage_sync:
@@ -152,7 +146,6 @@ SPEC CHECKSUMS:
   flutter_secure_storage_macos: 7f45e30f838cf2659862a4e4e3ee1c347c2b3b54
   flutter_web_auth_2: 62b08da29f15a20fa63f144234622a1488d45b65
   FlutterMacOS: d0db08ddef1a9af05a5ec4b724367152bb0500b1
-  gal: baecd024ebfd13c441269ca7404792a7152fde89
   google_sign_in_ios: b48bb9af78576358a168361173155596c845f0b9
   GoogleSignIn: ce8c89bb9b37fb624b92e7514cc67335d1e277e4
   GoogleUtilities: 00c88b9a86066ef77f0da2fab05f65d7768ed8e1
@@ -168,6 +161,6 @@ SPEC CHECKSUMS:
   window_manager: b729e31d38fb04905235df9ea896128991cad99e
   window_to_front: 9e76fd432e36700a197dac86a0011e49c89abe0a
 
-PODFILE CHECKSUM: 2b693067f166cbe4f8724b4cb5d5648a73aecae2
+PODFILE CHECKSUM: d75d9a33f96180531e5a697766c4635e2d931805
 
 COCOAPODS: 1.16.2

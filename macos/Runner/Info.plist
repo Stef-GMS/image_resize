@@ -28,9 +28,5 @@
 	<string>MainMenu</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
-	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>This app needs access to save resized images to your Photo Library.</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>This app needs access to your Photo Library to select images for resizing.</string>
 </dict>
 </plist>

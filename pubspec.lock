@@ -201,14 +201,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.1.1"
-  exif:
-    dependency: "direct main"
-    description:
-      name: exif
-      sha256: a7980fdb3b7ffcd0b035e5b8a5e1eef7cadfe90ea6a4e85ebb62f87b96c7a172
-      url: "https://pub.dev"
-    source: hosted
-    version: "3.3.0"
   extension_google_sign_in_as_googleapis_auth:
     dependency: transitive
     description:
@@ -464,14 +456,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "4.0.0"
-  gal:
-    dependency: "direct main"
-    description:
-      name: gal
-      sha256: "969598f986789127fd407a750413249e1352116d4c2be66e81837ffeeaafdfee"
-      url: "https://pub.dev"
-    source: hosted
-    version: "2.3.2"
   glob:
     dependency: transitive
     description:
@@ -592,6 +576,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "4.7.2"
+  image_gallery_saver:
+    dependency: "direct main"
+    description:
+      name: image_gallery_saver
+      sha256: "0aba74216a4d9b0561510cb968015d56b701ba1bd94aace26aacdd8ae5761816"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.0.3"
   image_picker:
     dependency: "direct main"
     description:
@@ -1117,14 +1109,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.10.1"
-  sprintf:
-    dependency: transitive
-    description:
-      name: sprintf
-      sha256: "1fc9ffe69d4df602376b52949af107d8f5703b77cda567c4d7d86a0693120f23"
-      url: "https://pub.dev"
-    source: hosted
-    version: "7.0.0"
   stack_trace:
     dependency: transitive
     description:

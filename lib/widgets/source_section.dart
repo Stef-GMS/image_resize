@@ -27,7 +27,7 @@ class SourceSection extends ConsumerWidget {
                 child: CustomIconButton(
                   theme: theme,
                   icon: Icons.photo_library_outlined,
-                  label: 'Photos',
+                  label: 'Device',
                   onPressed: notifier.pickImages,
                 ),
               ),
@@ -35,8 +35,8 @@ class SourceSection extends ConsumerWidget {
               Expanded(
                 child: CustomIconButton(
                   theme: theme,
-                  icon: Icons.folder_outlined,
-                  label: 'Files/Drive',
+                  icon: Icons.cloud_upload_outlined,
+                  label: 'Cloud',
                   onPressed: notifier.pickFromCloud,
                 ),
               ),
@@ -66,30 +66,16 @@ class SourceSection extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: notifier.clearImageSelections,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: theme.colorScheme.error.withAlpha(25),
-                    ),
-                    child: const Text('Clear'),
-                  ),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: notifier.clearImageSelections,
+                style: ElevatedButton.styleFrom(
+                  foregroundColor: theme.colorScheme.error,
+                  backgroundColor: theme.colorScheme.error.withAlpha(25),
                 ),
-                const SizedBox(width: 16),
-                Checkbox(
-                  value: state.resetOptionsOnClear,
-                  onChanged: (value) => notifier.setResetOptionsOnClear(value ?? true),
-                ),
-                GestureDetector(
-                  onTap: () => notifier.setResetOptionsOnClear(!state.resetOptionsOnClear),
-                  child: Text(
-                    'Reset Options',
-                    style: theme.textTheme.bodyMedium,
-                  ),
-                ),
-              ],
+                child: const Text('Clear'),
+              ),
             ),
           ],
         ],
