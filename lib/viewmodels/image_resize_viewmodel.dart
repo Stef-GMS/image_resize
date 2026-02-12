@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:exif/exif.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gal/gal.dart';
@@ -238,25 +239,57 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
   Future<void> _processPickedFiles(List<String> paths, [Map<String, String>? originalNames]) async {
     final firstImageFile = File(paths.first);
     final fileBytes = await firstImageFile.readAsBytes();
+
+    // Read EXIF data using the exif package (more reliable than image package)
+    String resolution = '72';
+    try {
+      final exifData = await readExifFromBytes(fileBytes);
+
+      if (exifData.isNotEmpty) {
+        print('DEBUG: EXIF data found with ${exifData.length} tags');
+
+        // Try different EXIF tags for resolution
+        final xRes = exifData['EXIF XResolution'] ?? exifData['Image XResolution'];
+        final yRes = exifData['EXIF YResolution'] ?? exifData['Image YResolution'];
+
+        print('DEBUG: XResolution tag = $xRes');
+        print('DEBUG: YResolution tag = $yRes');
+
+        if (xRes != null) {
+          // EXIF resolution is stored as "300/1" or similar
+          final resString = xRes.printable;
+          print('DEBUG: XResolution printable = $resString');
+
+          if (resString.contains('/')) {
+            final parts = resString.split('/');
+            if (parts.length == 2) {
+              final numerator = int.tryParse(parts[0].trim());
+              final denominator = int.tryParse(parts[1].trim());
+              if (numerator != null && denominator != null && denominator != 0) {
+                resolution = (numerator / denominator).round().toString();
+                print('DEBUG: Calculated DPI = $resolution');
+              }
+            }
+          } else {
+            // Try parsing as direct number
+            final dpi = int.tryParse(resString);
+            if (dpi != null) {
+              resolution = dpi.toString();
+              print('DEBUG: Direct DPI = $resolution');
+            }
+          }
+        }
+      } else {
+        print('DEBUG: No EXIF data found in image');
+      }
+    } catch (e) {
+      print('DEBUG: Error reading EXIF: $e');
+    }
+
+    // Decode the image
     final image = img.decodeImage(fileBytes);
 
     if (image != null) {
-      final exifData = image.exif;
-      final xResolution = exifData.getTag(tagXResolution);
-
-      // EXIF resolution is stored as a rational number (e.g., 300/1)
-      // Convert to double first, then to int to get the actual DPI value
-      String resolution = '72';
-      if (xResolution != null) {
-        try {
-          final dpiValue = xResolution.toDouble().round();
-          resolution = dpiValue.toString();
-        } catch (e) {
-          // Fallback to default if conversion fails
-          resolution = '72';
-        }
-      }
-
       // Only reset dimensions if resetOptionsOnClear is true
       // Otherwise, keep the user's current dimension values
       if (state.resetOptionsOnClear) {
