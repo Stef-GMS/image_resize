@@ -199,24 +199,22 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
   // region Image Picking Logic
   Future<void> pickImages() async {
     final imagePicker = ImagePicker();
-    final pickedFiles = await imagePicker.pickMultiImage();
+    final pickedFile = await imagePicker.pickImage(source: ImageSource.gallery);
 
-    if (pickedFiles.isNotEmpty) {
+    if (pickedFile != null) {
       // Create a map of temp paths to simplified filenames
       // Since image_picker doesn't preserve original filenames on iOS,
       // we'll use a sequential naming pattern
       final originalNames = <String, String>{};
-      int counter = 1;
-      for (final file in pickedFiles) {
-        // Extract the file extension from the temp file
-        final extension = file.path.split('.').last;
-        // Create a simple filename like IMG_0001.jpg, IMG_0002.jpg, etc.
-        final simpleName = 'IMG_${counter.toString().padLeft(4, '0')}.$extension';
-        originalNames[file.path] = simpleName;
-        counter++;
-      }
+
+      // Extract the file extension from the temp file
+      final extension = pickedFile.path.split('.').last;
+      // Create a simple filename like IMG_0001.jpg
+      final simpleName = 'IMG_0001.$extension';
+      originalNames[pickedFile.path] = simpleName;
+
       await _processPickedFiles(
-        pickedFiles.map((f) => f.path).toList(),
+        [pickedFile.path],
         originalNames,
       );
     }
