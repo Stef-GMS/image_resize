@@ -39,31 +39,46 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
 
   // region State Update Methods
   void setDimensionType(DimensionUnitType type) {
+    final oldType = state.dimensionType;
     state = state.copyWith(dimensionType: type);
 
-    // When switching dimension types, set appropriate default values
-    if (state.firstImage != null) {
+    // When switching dimension types, convert current values to new unit type
+    if (state.firstImage != null && state.width.isNotEmpty && state.height.isNotEmpty) {
       final resolution = int.tryParse(state.resolution) ?? 72;
 
+      // First, calculate the current pixel dimensions based on the OLD unit type
+      final (currentPixelWidth, currentPixelHeight) = _calculatePixelDimensionsForType(
+        oldType,
+        double.tryParse(state.width) ?? 0,
+        double.tryParse(state.height) ?? 0,
+        resolution.toDouble(),
+      );
+
+      // Then convert those pixel dimensions to the NEW unit type
       switch (type) {
         case DimensionUnitType.percent:
-          // Set to 100%
+          // Convert to percentage of original image
+          final widthPercent = (currentPixelWidth / state.firstImage!.width * 100).toStringAsFixed(
+            2,
+          );
+          final heightPercent = (currentPixelHeight / state.firstImage!.height * 100)
+              .toStringAsFixed(2);
           state = state.copyWith(
-            width: '100',
-            height: '100',
+            width: widthPercent,
+            height: heightPercent,
           );
           break;
         case DimensionUnitType.pixels:
-          // Restore original pixel dimensions
+          // Already have pixel dimensions
           state = state.copyWith(
-            width: state.firstImage!.width.toString(),
-            height: state.firstImage!.height.toString(),
+            width: currentPixelWidth.round().toString(),
+            height: currentPixelHeight.round().toString(),
           );
           break;
         case DimensionUnitType.inches:
           // Convert pixels to inches
-          final widthInches = (state.firstImage!.width / resolution).toStringAsFixed(2);
-          final heightInches = (state.firstImage!.height / resolution).toStringAsFixed(2);
+          final widthInches = (currentPixelWidth / resolution).toStringAsFixed(2);
+          final heightInches = (currentPixelHeight / resolution).toStringAsFixed(2);
           state = state.copyWith(
             width: widthInches,
             height: heightInches,
@@ -71,8 +86,8 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
           break;
         case DimensionUnitType.cm:
           // Convert pixels to cm (1 inch = 2.54 cm)
-          final widthCm = (state.firstImage!.width / resolution * 2.54).toStringAsFixed(2);
-          final heightCm = (state.firstImage!.height / resolution * 2.54).toStringAsFixed(2);
+          final widthCm = (currentPixelWidth / resolution * 2.54).toStringAsFixed(2);
+          final heightCm = (currentPixelHeight / resolution * 2.54).toStringAsFixed(2);
           state = state.copyWith(
             width: widthCm,
             height: heightCm,
@@ -80,8 +95,8 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
           break;
         case DimensionUnitType.mm:
           // Convert pixels to mm (1 inch = 25.4 mm)
-          final widthMm = (state.firstImage!.width / resolution * 25.4).toStringAsFixed(2);
-          final heightMm = (state.firstImage!.height / resolution * 25.4).toStringAsFixed(2);
+          final widthMm = (currentPixelWidth / resolution * 25.4).toStringAsFixed(2);
+          final heightMm = (currentPixelHeight / resolution * 25.4).toStringAsFixed(2);
           state = state.copyWith(
             width: widthMm,
             height: heightMm,
@@ -593,6 +608,40 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
   }
 
   // endregion
+
+  /// Helper method to calculate pixel dimensions for a specific dimension type
+  /// Used when converting between dimension types
+  (double, double) _calculatePixelDimensionsForType(
+    DimensionUnitType type,
+    double widthInput,
+    double heightInput,
+    double resolution,
+  ) {
+    if (state.firstImage == null) return (0, 0);
+
+    switch (type) {
+      case DimensionUnitType.percent:
+        return (
+          state.firstImage!.width * widthInput / 100,
+          state.firstImage!.height * heightInput / 100,
+        );
+      case DimensionUnitType.inches:
+        return (widthInput * resolution, heightInput * resolution);
+      case DimensionUnitType.cm:
+        return (
+          widthInput * resolution / 2.54,
+          heightInput * resolution / 2.54,
+        );
+      case DimensionUnitType.mm:
+        return (
+          widthInput * resolution / 25.4,
+          heightInput * resolution / 25.4,
+        );
+      case DimensionUnitType.pixels:
+        return (widthInput, heightInput);
+    }
+  }
+
   (int, int) _calculatePixelDimensions() {
     if (state.firstImage == null) return (0, 0);
 
