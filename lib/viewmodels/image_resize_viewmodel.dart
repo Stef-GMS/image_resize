@@ -237,16 +237,10 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
       ],
     );
     if (result != null && result.files.isNotEmpty) {
-      // Create a map of paths to original filenames
-      final originalNames = <String, String>{};
-      for (final file in result.files) {
-        if (file.path != null) {
-          originalNames[file.path!] = file.name;
-        }
-      }
+      // For cloud/filesystem picks, don't pass originalNames
+      // This will preserve the actual filename from the path
       await _processPickedFiles(
         result.paths.where((p) => p != null).cast<String>().toList(),
-        originalNames,
       );
     }
   }
@@ -257,11 +251,25 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
 
     // Read EXIF data using the exif package (more reliable than image package)
     String resolution = '72';
+    String? exifFilename;
+
     try {
       final exifData = await readExifFromBytes(fileBytes);
 
       if (exifData.isNotEmpty) {
         print('DEBUG: EXIF data found with ${exifData.length} tags');
+
+        // Try to extract original filename from EXIF
+        final imageDescription = exifData['Image ImageDescription'];
+        final documentName = exifData['Image DocumentName'];
+
+        if (imageDescription != null) {
+          exifFilename = imageDescription.printable;
+          print('DEBUG: Found filename in ImageDescription: $exifFilename');
+        } else if (documentName != null) {
+          exifFilename = documentName.printable;
+          print('DEBUG: Found filename in DocumentName: $exifFilename');
+        }
 
         // Try different EXIF tags for resolution
         final xRes = exifData['EXIF XResolution'] ?? exifData['Image XResolution'];
@@ -328,11 +336,26 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
       _updateSuffix();
     }
 
+    // Determine the base filename to use
+    String baseFilename = '';
+
+    // If we found a filename in EXIF and we're picking from device photos (originalNames provided),
+    // use the EXIF filename in the base filename field
+    if (exifFilename != null && exifFilename.isNotEmpty && originalNames != null) {
+      // Remove extension from EXIF filename if present
+      if (exifFilename.contains('.')) {
+        baseFilename = exifFilename.substring(0, exifFilename.lastIndexOf('.'));
+      } else {
+        baseFilename = exifFilename;
+      }
+      print('DEBUG: Setting base filename from EXIF: $baseFilename');
+    }
+
     state = state.copyWith(
       selectedImages: [...state.selectedImages, ...paths.map((p) => File(p))],
       originalFileNames: {...state.originalFileNames, ...?originalNames},
       saveDirectory: File(paths.first).parent.path,
-      baseFilename: '', // Clear base filename when picking new images
+      baseFilename: baseFilename,
     );
   }
 
