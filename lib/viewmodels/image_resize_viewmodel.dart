@@ -336,24 +336,48 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
       _updateSuffix();
     }
 
-    // Determine the base filename to use
+    // Determine the base filename to use and update originalNames if needed
     String baseFilename = '';
+    Map<String, String>? updatedOriginalNames = originalNames;
 
-    // If we found a filename in EXIF and we're picking from device photos (originalNames provided),
-    // use the EXIF filename in the base filename field
-    if (exifFilename != null && exifFilename.isNotEmpty && originalNames != null) {
-      // Remove extension from EXIF filename if present
-      if (exifFilename.contains('.')) {
-        baseFilename = exifFilename.substring(0, exifFilename.lastIndexOf('.'));
-      } else {
-        baseFilename = exifFilename;
+    if (originalNames != null) {
+      // Picking from device photos - try EXIF filename first, then fall back to sequential naming
+      if (exifFilename != null && exifFilename.isNotEmpty) {
+        // Use EXIF filename for base filename (without extension)
+        if (exifFilename.contains('.')) {
+          baseFilename = exifFilename.substring(0, exifFilename.lastIndexOf('.'));
+        } else {
+          baseFilename = exifFilename;
+        }
+
+        // Also update the originalNames map to use EXIF filename instead of IMG_0001
+        // This ensures the saved file uses the EXIF name when base filename is cleared
+        updatedOriginalNames = Map<String, String>.from(originalNames);
+        for (final path in paths) {
+          // Get the extension from the temp file
+          final extension = path.split('.').last;
+          // Use EXIF filename with proper extension
+          updatedOriginalNames[path] = exifFilename.contains('.')
+              ? exifFilename
+              : '$exifFilename.$extension';
+        }
+        print('DEBUG: Setting base filename and originalNames from EXIF: $baseFilename');
       }
-      print('DEBUG: Setting base filename from EXIF: $baseFilename');
+      // If no EXIF filename, baseFilename stays empty and sequential naming (IMG_0001) will be used
+    } else {
+      // Picking from cloud/filesystem - use actual filename from path
+      final actualFilename = paths.first.split('/').last;
+      if (actualFilename.contains('.')) {
+        baseFilename = actualFilename.substring(0, actualFilename.lastIndexOf('.'));
+      } else {
+        baseFilename = actualFilename;
+      }
+      print('DEBUG: Setting base filename from file path: $baseFilename');
     }
 
     state = state.copyWith(
       selectedImages: [...state.selectedImages, ...paths.map((p) => File(p))],
-      originalFileNames: {...state.originalFileNames, ...?originalNames},
+      originalFileNames: {...state.originalFileNames, ...?updatedOriginalNames},
       saveDirectory: File(paths.first).parent.path,
       baseFilename: baseFilename,
     );
