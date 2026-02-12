@@ -35,6 +35,7 @@ class _ImageResizeScreenState extends ConsumerState<ImageResizeScreen> {
   final _widthController = TextEditingController();
   final _heightController = TextEditingController();
   final _suffixController = TextEditingController();
+  final _baseFilenameController = TextEditingController();
   final _resolutionController = TextEditingController();
 
   @override
@@ -52,6 +53,7 @@ class _ImageResizeScreenState extends ConsumerState<ImageResizeScreen> {
     _widthController.dispose();
     _heightController.dispose();
     _suffixController.dispose();
+    _baseFilenameController.dispose();
     _resolutionController.dispose();
     super.dispose();
   }
@@ -83,6 +85,9 @@ class _ImageResizeScreenState extends ConsumerState<ImageResizeScreen> {
     }
     if (_suffixController.text != state.suffix) {
       _suffixController.text = state.suffix;
+    }
+    if (_baseFilenameController.text != state.baseFilename) {
+      _baseFilenameController.text = state.baseFilename;
     }
     if (_resolutionController.text != state.resolution) {
       _resolutionController.text = state.resolution;
@@ -130,6 +135,7 @@ class _ImageResizeScreenState extends ConsumerState<ImageResizeScreen> {
                           OutputSection(
                             theme: theme,
                             suffixController: _suffixController,
+                            baseFilenameController: _baseFilenameController,
                           ),
                           const SizedBox(height: 16),
                           SaveLocationSection(theme: theme),
