@@ -27,7 +27,7 @@ class SourceSection extends ConsumerWidget {
                 child: CustomIconButton(
                   theme: theme,
                   icon: Icons.photo_library_outlined,
-                  label: 'Device',
+                  label: 'Photos',
                   onPressed: notifier.pickImages,
                 ),
               ),
@@ -35,8 +35,8 @@ class SourceSection extends ConsumerWidget {
               Expanded(
                 child: CustomIconButton(
                   theme: theme,
-                  icon: Icons.cloud_upload_outlined,
-                  label: 'Cloud',
+                  icon: Icons.folder_outlined,
+                  label: 'Files/Drive',
                   onPressed: notifier.pickFromCloud,
                 ),
               ),
@@ -72,7 +72,6 @@ class SourceSection extends ConsumerWidget {
                   child: ElevatedButton(
                     onPressed: notifier.clearImageSelections,
                     style: ElevatedButton.styleFrom(
-                      foregroundColor: theme.colorScheme.error,
                       backgroundColor: theme.colorScheme.error.withAlpha(25),
                     ),
                     child: const Text('Clear'),
