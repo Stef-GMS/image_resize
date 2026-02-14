@@ -570,28 +570,15 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
     if (hasPermission) {
       state = state.copyWith(isResizing: true);
 
-      // Calculate actual pixel dimensions based on unit type
-      final (pixelWidth, pixelHeight) = _calculatePixelDimensions();
-
       for (final imageFile in state.selectedImages) {
         print('DEBUG: Processing image: ${imageFile.path}');
 
         // Get original filename if available (for images picked from device photos)
         final originalFileName = state.originalFileNames[imageFile.path];
-        final newFileName = fileSystemService.getNewFileName(
-          imageFile.path,
-          originalFileName,
-          state.baseFilename.isNotEmpty ? state.baseFilename : null,
-          state.suffix,
-          state.outputFormat,
-        );
-        print('DEBUG: New filename will be: $newFileName');
 
         // Ensure save directory exists (only for non-photo-library saving)
         if (!saveToPhotos && savePath != null) {
-          final newPath = '$savePath/$newFileName';
-
-          final parentDir = File(newPath).parent;
+          final parentDir = Directory(savePath);
           if (!await parentDir.exists()) {
             try {
               await parentDir.create(recursive: true);
@@ -611,6 +598,19 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
           continue;
         }
         print('DEBUG: Decoded image: ${image.width}x${image.height}');
+
+        // Calculate actual pixel dimensions based on unit type FOR THIS IMAGE
+        final (pixelWidth, pixelHeight) = _calculatePixelDimensionsForImage(image);
+        print('DEBUG: Target dimensions: $pixelWidth x $pixelHeight');
+
+        final newFileName = fileSystemService.getNewFileName(
+          imageFile.path,
+          originalFileName,
+          state.baseFilename.isNotEmpty ? state.baseFilename : null,
+          state.suffix,
+          state.outputFormat,
+        );
+        print('DEBUG: New filename will be: $newFileName');
 
         final resizedBytes = await imageProcessingService.resizeImage(
           imageData: originalBytes,
@@ -784,7 +784,10 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
 
   (int, int) _calculatePixelDimensions() {
     if (state.firstImage == null) return (0, 0);
+    return _calculatePixelDimensionsForImage(state.firstImage!);
+  }
 
+  (int, int) _calculatePixelDimensionsForImage(img.Image image) {
     final widthInput = double.tryParse(state.width) ?? 0;
     final heightInput = double.tryParse(state.height) ?? 0;
     var resolution = double.tryParse(state.resolution) ?? 72.0;
@@ -792,8 +795,8 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
     switch (state.dimensionType) {
       case DimensionUnitType.percent:
         return (
-          (state.firstImage!.width * widthInput / 100).round(),
-          (state.firstImage!.height * heightInput / 100).round(),
+          (image.width * widthInput / 100).round(),
+          (image.height * heightInput / 100).round(),
         );
       case DimensionUnitType.inches:
         return ((widthInput * resolution).round(), (heightInput * resolution).round());
