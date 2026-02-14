@@ -385,7 +385,6 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
     state = state.copyWith(
       selectedImages: [...state.selectedImages, ...paths.map((p) => File(p))],
       originalFileNames: {...state.originalFileNames, ...?originalNames},
-      saveDirectory: File(paths.first).parent.path,
       baseFilename: baseFilename,
     );
   }
