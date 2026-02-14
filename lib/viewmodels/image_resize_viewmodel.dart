@@ -467,6 +467,16 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
 
     final saveToPhotos = state.saveDestination == SaveDestination.devicePhotos;
 
+    // On macOS, block saving to Photos - both gal and photo_manager crash
+    if (Platform.isMacOS && saveToPhotos) {
+      state = state.copyWith(
+        isResizing: false,
+        snackbarMessage:
+            'Saving to Photos is not supported on macOS. Please choose "Device File System" or "Cloud" instead.',
+      );
+      return;
+    }
+
     // For file system / cloud saving, resolve the save path
     String? savePath;
     if (!saveToPhotos) {
