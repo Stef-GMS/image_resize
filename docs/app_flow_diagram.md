@@ -74,13 +74,13 @@ flowchart TD
     
     Success --> End([Done])
     
-    style Start fill:#e1f5e1
-    style End fill:#e1f5e1
-    style PhotosBlocked fill:#ffe1e1
-    style ConflictDialog fill:#fff4e1
-    style Success fill:#e1f5e1
-    style ProcessLoop fill:#e1e8ff
-    style CalcDims fill:#ffe1f5
+    style Start fill:#d4f1f4
+    style End fill:#d4f1f4
+    style PhotosBlocked fill:#ffd4d4
+    style ConflictDialog fill:#ffe8b3
+    style Success fill:#d4f1f4
+    style ProcessLoop fill:#cce5ff
+    style CalcDims fill:#e6ccff
 ```
 
 ## Key Highlights
@@ -96,10 +96,10 @@ flowchart TD
 - **For Each Image** (blue): Processing loop handles multiple images individually
 - **File Conflict Handling** (yellow): User chooses overwrite or add sequence number
 
-### Color Legend
-- 🟢 Green: Start/End/Success states
+### Color Legend (Colorblind-Friendly)
+- 🔵 Cyan: Start/End/Success states
 - 🔴 Red: Error/Blocked states
-- 🟡 Yellow: User decision points
-- 🔵 Blue: Processing loop
-- 🟣 Pink: Key feature (per-image calculation)
+- 🟡 Orange: User decision points
+- 🔵 Light Blue: Processing loop
+- 🟣 Purple: Key feature (per-image calculation)
 
