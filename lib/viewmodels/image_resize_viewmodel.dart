@@ -526,7 +526,8 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
     }
 
     // Check for file conflicts before starting resize (only for file system saves)
-    if (!saveToPhotos && savePath != null && !state.overwriteAll) {
+    // Skip check if user has already made a choice (overwriteAll or useSequenceNumbers)
+    if (!saveToPhotos && savePath != null && !state.overwriteAll && !state.useSequenceNumbers) {
       final conflicts = await _checkFileConflicts(savePath, fileSystemService);
       if (conflicts.isNotEmpty) {
         // Set file conflict state to trigger UI dialog
@@ -541,7 +542,7 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
     }
 
     if (hasPermission) {
-      state = state.copyWith(isResizing: true, overwriteAll: false, useSequenceNumbers: false);
+      state = state.copyWith(isResizing: true);
 
       // Calculate actual pixel dimensions based on unit type
       final (pixelWidth, pixelHeight) = _calculatePixelDimensions();
@@ -557,7 +558,7 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
           state.outputFormat,
         );
 
-        // File system overwrite checks (only for non-photo-library saving)
+        // Ensure save directory exists (only for non-photo-library saving)
         if (!saveToPhotos && savePath != null) {
           final newPath = '$savePath/$newFileName';
 
@@ -567,22 +568,6 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
               await parentDir.create(recursive: true);
             } catch (e) {
               state = state.copyWith(snackbarMessage: 'Error: Could not create save directory: $e');
-              continue;
-            }
-          }
-
-          if (!state.overwriteAll && await File(newPath).exists()) {
-            state = state.copyWith(snackbarMessage: 'File $newFileName already exists. Skipping.');
-            continue;
-          }
-
-          if (state.overwriteAll && await File(newPath).exists()) {
-            try {
-              await File(newPath).delete();
-            } catch (e) {
-              state = state.copyWith(
-                snackbarMessage: 'Error: Could not delete existing file for overwrite: $e',
-              );
               continue;
             }
           }
@@ -677,6 +662,19 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
           }
 
           final newPath = '$savePath/$finalFileName';
+
+          // Delete existing file if overwrite mode is enabled
+          if (state.overwriteAll && await File(newPath).exists()) {
+            try {
+              await File(newPath).delete();
+            } catch (e) {
+              state = state.copyWith(
+                snackbarMessage: 'Error: Could not delete existing file for overwrite: $e',
+              );
+              continue;
+            }
+          }
+
           await File(newPath).writeAsBytes(encodedImage);
         }
       }
@@ -690,6 +688,8 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
         hasResized: false,
         resizedImagesData: null,
         snackbarMessage: successMessage,
+        overwriteAll: false,
+        useSequenceNumbers: false,
       );
     }
   }
