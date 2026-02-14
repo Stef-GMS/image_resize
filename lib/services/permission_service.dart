@@ -2,28 +2,33 @@ import 'dart:io';
 
 import 'package:gal/gal.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:photo_manager/photo_manager.dart';
 
 class PermissionService {
   /// Request permission to save to the device's Photo Library.
-  /// Uses the gal package's built-in permission handling which works
-  /// on iOS, Android, and macOS.
+  /// Uses photo_manager on macOS and gal on iOS/Android.
   Future<bool> requestPhotoLibraryPermission() async {
-    try {
-      final hasAccess = await Gal.hasAccess();
-      if (!hasAccess) {
-        await Gal.requestAccess();
-        return await Gal.hasAccess();
+    if (Platform.isMacOS) {
+      // Use photo_manager on macOS
+      try {
+        final PermissionState ps = await PhotoManager.requestPermissionExtend();
+        return ps.hasAccess;
+      } catch (e) {
+        // If permission request fails, return false
+        return false;
       }
-      return true;
-    } catch (e) {
-      // On macOS, Flutter has a known issue loading Info.plist which can cause
-      // gal to crash. If permission check fails, assume we have permission
-      // (the entitlements should handle it).
-      if (Platform.isMacOS) {
+    } else {
+      // Use gal on iOS/Android
+      try {
+        final hasAccess = await Gal.hasAccess();
+        if (!hasAccess) {
+          await Gal.requestAccess();
+          return await Gal.hasAccess();
+        }
         return true;
+      } catch (e) {
+        rethrow;
       }
-      // On other platforms, rethrow the error
-      rethrow;
     }
   }
 
