@@ -574,6 +574,8 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
       final (pixelWidth, pixelHeight) = _calculatePixelDimensions();
 
       for (final imageFile in state.selectedImages) {
+        print('DEBUG: Processing image: ${imageFile.path}');
+
         // Get original filename if available (for images picked from device photos)
         final originalFileName = state.originalFileNames[imageFile.path];
         final newFileName = fileSystemService.getNewFileName(
@@ -583,6 +585,7 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
           state.suffix,
           state.outputFormat,
         );
+        print('DEBUG: New filename will be: $newFileName');
 
         // Ensure save directory exists (only for non-photo-library saving)
         if (!saveToPhotos && savePath != null) {
