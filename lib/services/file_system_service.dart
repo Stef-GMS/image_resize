@@ -59,4 +59,38 @@ class FileSystemService {
 
     return '$oldNameWithoutExtension$suffix.$newExtension';
   }
+
+  /// Generate a unique filename by adding a sequence number if the file exists.
+  /// Returns the filename with sequence number (e.g., "image_1.jpg", "image_2.jpg")
+  Future<String> getUniqueFileName(String directory, String baseFilename) async {
+    final file = File('$directory/$baseFilename');
+
+    if (!await file.exists()) {
+      return baseFilename;
+    }
+
+    // Extract name and extension
+    final lastDot = baseFilename.lastIndexOf('.');
+    final String nameWithoutExt;
+    final String extension;
+
+    if (lastDot != -1) {
+      nameWithoutExt = baseFilename.substring(0, lastDot);
+      extension = baseFilename.substring(lastDot);
+    } else {
+      nameWithoutExt = baseFilename;
+      extension = '';
+    }
+
+    // Find the next available sequence number
+    int sequence = 1;
+    while (true) {
+      final newFilename = '${nameWithoutExt}_$sequence$extension';
+      final newFile = File('$directory/$newFilename');
+      if (!await newFile.exists()) {
+        return newFilename;
+      }
+      sequence++;
+    }
+  }
 }
