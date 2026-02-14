@@ -469,6 +469,17 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
 
     final saveToPhotos = state.saveDestination == SaveDestination.devicePhotos;
 
+    // On macOS, block saving to Photos - no Flutter package supports it
+    // Note: Picking from Photos works via native_image_picker_macos
+    if (Platform.isMacOS && saveToPhotos) {
+      state = state.copyWith(
+        isResizing: false,
+        snackbarMessage:
+            'Saving to Photos is not supported on macOS. Please choose "Device File System" or "Cloud".',
+      );
+      return;
+    }
+
     // For file system / cloud saving, resolve the save path
     String? savePath;
     if (!saveToPhotos) {

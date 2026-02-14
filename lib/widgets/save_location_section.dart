@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_resize/models/save_destination.dart';
@@ -18,9 +20,16 @@ class SaveLocationSection extends ConsumerWidget {
     final state = ref.watch(imageResizeViewModelProvider);
     final notifier = ref.read(imageResizeViewModelProvider.notifier);
 
-    // All destinations are now available on all platforms
-    final availableDestinations = SaveDestination.values;
-    final currentDestination = state.saveDestination;
+    // On macOS, exclude Device Photos save option (no Flutter package supports it)
+    // Note: Picking from Photos still works via native_image_picker_macos
+    final availableDestinations = Platform.isMacOS
+        ? SaveDestination.values.where((d) => d != SaveDestination.devicePhotos).toList()
+        : SaveDestination.values;
+
+    // Ensure the current value is in the available destinations
+    final currentDestination = availableDestinations.contains(state.saveDestination)
+        ? state.saveDestination
+        : SaveDestination.deviceFileSystem;
 
     return SectionCard(
       title: 'Save Location',
