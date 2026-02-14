@@ -571,8 +571,6 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
       state = state.copyWith(isResizing: true);
 
       for (final imageFile in state.selectedImages) {
-        print('DEBUG: Processing image: ${imageFile.path}');
-
         // Get original filename if available (for images picked from device photos)
         final originalFileName = state.originalFileNames[imageFile.path];
 
@@ -590,18 +588,15 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
         }
 
         final originalBytes = await imageFile.readAsBytes();
-        print('DEBUG: Read ${originalBytes.length} bytes from ${imageFile.path}');
 
         final image = img.decodeImage(originalBytes);
         if (image == null) {
           state = state.copyWith(snackbarMessage: 'Error decoding image: ${imageFile.path}');
           continue;
         }
-        print('DEBUG: Decoded image: ${image.width}x${image.height}');
 
         // Calculate actual pixel dimensions based on unit type FOR THIS IMAGE
         final (pixelWidth, pixelHeight) = _calculatePixelDimensionsForImage(image);
-        print('DEBUG: Target dimensions: $pixelWidth x $pixelHeight');
 
         final newFileName = fileSystemService.getNewFileName(
           imageFile.path,
@@ -610,7 +605,6 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
           state.suffix,
           state.outputFormat,
         );
-        print('DEBUG: New filename will be: $newFileName');
 
         final resizedBytes = await imageProcessingService.resizeImage(
           imageData: originalBytes,
@@ -626,7 +620,6 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
           );
           continue;
         }
-        print('DEBUG: Resized image: ${resizedImage.width}x${resizedImage.height}');
 
         final resolution = int.tryParse(state.resolution) ?? 72;
 
@@ -715,7 +708,6 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
           }
 
           await File(newPath).writeAsBytes(encodedImage);
-          print('DEBUG: Wrote ${encodedImage.length} bytes to $newPath');
         }
       }
 
