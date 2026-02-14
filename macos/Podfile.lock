@@ -58,6 +58,8 @@ PODS:
     - GTMSessionFetcher/Core
   - icloud_storage_sync (0.0.2):
     - FlutterMacOS
+  - native_image_picker_macos (0.0.1):
+    - FlutterMacOS
   - OrderedSet (6.0.3)
   - path_provider_foundation (0.0.1):
     - Flutter
@@ -87,6 +89,7 @@ DEPENDENCIES:
   - gal (from `Flutter/ephemeral/.symlinks/plugins/gal/darwin`)
   - google_sign_in_ios (from `Flutter/ephemeral/.symlinks/plugins/google_sign_in_ios/darwin`)
   - icloud_storage_sync (from `Flutter/ephemeral/.symlinks/plugins/icloud_storage_sync/macos`)
+  - native_image_picker_macos (from `Flutter/ephemeral/.symlinks/plugins/native_image_picker_macos/macos`)
   - path_provider_foundation (from `Flutter/ephemeral/.symlinks/plugins/path_provider_foundation/darwin`)
   - screen_retriever_macos (from `Flutter/ephemeral/.symlinks/plugins/screen_retriever_macos/macos`)
   - shared_preferences_foundation (from `Flutter/ephemeral/.symlinks/plugins/shared_preferences_foundation/darwin`)
@@ -128,6 +131,8 @@ EXTERNAL SOURCES:
     :path: Flutter/ephemeral/.symlinks/plugins/google_sign_in_ios/darwin
   icloud_storage_sync:
     :path: Flutter/ephemeral/.symlinks/plugins/icloud_storage_sync/macos
+  native_image_picker_macos:
+    :path: Flutter/ephemeral/.symlinks/plugins/native_image_picker_macos/macos
   path_provider_foundation:
     :path: Flutter/ephemeral/.symlinks/plugins/path_provider_foundation/darwin
   screen_retriever_macos:
@@ -159,6 +164,7 @@ SPEC CHECKSUMS:
   GTMAppAuth: f69bd07d68cd3b766125f7e072c45d7340dea0de
   GTMSessionFetcher: 5aea5ba6bd522a239e236100971f10cb71b96ab6
   icloud_storage_sync: f286d6b6260fee06514cab02eac576b08f1b03fc
+  native_image_picker_macos: 9b38fdaa47d7d47087d61e32a157ac2164a6bc9e
   OrderedSet: e539b66b644ff081c73a262d24ad552a69be3a94
   path_provider_foundation: bb55f6dbba17d0dccd6737fe6f7f34fbd0376880
   PromisesObjC: f5707f49cb48b9636751c5b2e7d227e43fba9f47
