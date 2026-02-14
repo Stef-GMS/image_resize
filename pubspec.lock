@@ -633,7 +633,7 @@ packages:
     source: hosted
     version: "0.2.2"
   image_picker_macos:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: image_picker_macos
       sha256: "86f0f15a309de7e1a552c12df9ce5b59fe927e71385329355aec4776c6a8ec91"
@@ -768,6 +768,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.6.0"
+  native_image_picker_macos:
+    dependency: "direct main"
+    description:
+      name: native_image_picker_macos
+      sha256: a37eb4dc30a9137775492359c1dd2620b4b0cd1a26d385972996d9f4734cd314
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.0.2"
   node_preamble:
     dependency: transitive
     description:

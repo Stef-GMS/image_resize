@@ -15,6 +15,7 @@ import flutter_web_auth_2
 import gal
 import google_sign_in_ios
 import icloud_storage_sync
+import native_image_picker_macos
 import path_provider_foundation
 import screen_retriever_macos
 import shared_preferences_foundation
@@ -33,6 +34,7 @@ func RegisterGeneratedPlugins(registry: FlutterPluginRegistry) {
   GalPlugin.register(with: registry.registrar(forPlugin: "GalPlugin"))
   FLTGoogleSignInPlugin.register(with: registry.registrar(forPlugin: "FLTGoogleSignInPlugin"))
   IcloudStorageSyncPlugin.register(with: registry.registrar(forPlugin: "IcloudStorageSyncPlugin"))
+  NativeImagePickerPlugin.register(with: registry.registrar(forPlugin: "NativeImagePickerPlugin"))
   PathProviderPlugin.register(with: registry.registrar(forPlugin: "PathProviderPlugin"))
   ScreenRetrieverMacosPlugin.register(with: registry.registrar(forPlugin: "ScreenRetrieverMacosPlugin"))
   SharedPreferencesPlugin.register(with: registry.registrar(forPlugin: "SharedPreferencesPlugin"))

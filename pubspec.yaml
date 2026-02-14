@@ -15,7 +15,9 @@ dependencies:
   gal: ^2.3.2
   image: ^4.7.2
   image_picker: ^1.2.1
+  image_picker_macos: ^0.2.2+1
   multi_cloud_storage: ^0.6.0
+  native_image_picker_macos: ^0.0.2
   path_provider: ^2.1.5
   permission_handler: ^12.0.1
   window_manager: ^0.5.1
