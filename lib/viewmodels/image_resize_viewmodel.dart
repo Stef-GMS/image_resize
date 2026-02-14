@@ -690,6 +690,7 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
         snackbarMessage: successMessage,
         overwriteAll: false,
         useSequenceNumbers: false,
+        fileConflict: null,
       );
     }
   }
