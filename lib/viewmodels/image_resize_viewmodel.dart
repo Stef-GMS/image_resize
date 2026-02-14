@@ -512,15 +512,28 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
     }
 
     // Request appropriate permission based on save destination
-    final hasPermission = saveToPhotos
-        ? await permissionService.requestPhotoLibraryPermission()
-        : await permissionService.requestStoragePermission();
+    print('DEBUG: Requesting permission for saveToPhotos=$saveToPhotos');
+    bool hasPermission = false;
+    try {
+      hasPermission = saveToPhotos
+          ? await permissionService.requestPhotoLibraryPermission()
+          : await permissionService.requestStoragePermission();
 
-    if (!hasPermission) {
+      print('DEBUG: Permission granted: $hasPermission');
+
+      if (!hasPermission) {
+        state = state.copyWith(
+          snackbarMessage: saveToPhotos
+              ? 'Photo Library permission denied. Please grant permission in System Settings.'
+              : 'Storage permission denied.',
+        );
+        return;
+      }
+    } catch (e, stackTrace) {
+      print('ERROR: Permission request failed: $e');
+      print('STACK TRACE: $stackTrace');
       state = state.copyWith(
-        snackbarMessage: saveToPhotos
-            ? 'Photo Library permission denied. Please grant permission in System Settings.'
-            : 'Storage permission denied.',
+        snackbarMessage: 'Permission request failed: ${e.toString()}',
       );
       return;
     }
