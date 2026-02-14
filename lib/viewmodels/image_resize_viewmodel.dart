@@ -476,6 +476,15 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
         ? await permissionService.requestPhotoLibraryPermission()
         : await permissionService.requestStoragePermission();
 
+    if (!hasPermission) {
+      state = state.copyWith(
+        snackbarMessage: saveToPhotos
+            ? 'Photo Library permission denied. Please grant permission in System Settings.'
+            : 'Storage permission denied.',
+      );
+      return;
+    }
+
     if (hasPermission) {
       state = state.copyWith(isResizing: true, overwriteAll: false);
 
