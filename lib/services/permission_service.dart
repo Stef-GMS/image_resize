@@ -5,8 +5,16 @@ import 'package:permission_handler/permission_handler.dart';
 
 class PermissionService {
   /// Request permission to save to the device's Photo Library.
-  /// Uses gal on all platforms (iOS, Android, macOS).
+  /// Uses gal on iOS/Android. On macOS, relies on entitlements.
   Future<bool> requestPhotoLibraryPermission() async {
+    // On macOS, skip permission check - entitlements handle it
+    // Both gal and photo_manager crash when requesting permissions on macOS
+    if (Platform.isMacOS) {
+      print('DEBUG: Skipping permission check on macOS (using entitlements)');
+      return true;
+    }
+
+    // Use gal on iOS/Android
     try {
       print('DEBUG: Requesting Photo Library permission via gal');
       final hasAccess = await Gal.hasAccess();
@@ -22,12 +30,6 @@ class PermissionService {
     } catch (e, stackTrace) {
       print('ERROR: gal permission request failed: $e');
       print('STACK TRACE: $stackTrace');
-      // On macOS, gal might fail but the entitlements should handle permissions
-      // Return true to allow the save attempt
-      if (Platform.isMacOS) {
-        print('DEBUG: Assuming permission granted on macOS due to entitlements');
-        return true;
-      }
       rethrow;
     }
   }
