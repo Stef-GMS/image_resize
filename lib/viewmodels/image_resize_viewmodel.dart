@@ -14,6 +14,7 @@ import 'package:image_resize/services/file_system_service.dart';
 import 'package:image_resize/services/image_processing_service.dart';
 import 'package:image_resize/services/permission_service.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:photo_manager/photo_manager.dart';
 
 final tagXResolution = img.exifTagNameToID['XResolution']!;
 final tagYResolution = img.exifTagNameToID['YResolution']!;
@@ -417,15 +418,6 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
 
     final saveToPhotos = state.saveDestination == SaveDestination.devicePhotos;
 
-    // On macOS, if trying to save to Photos, block it due to known crash issue
-    if (Platform.isMacOS && saveToPhotos) {
-      state = state.copyWith(
-        snackbarMessage:
-            'Saving to Photos app is not supported on macOS due to a Flutter limitation. Please choose "Device File System" or "Cloud" instead.',
-      );
-      return;
-    }
-
     // For file system / cloud saving, resolve the save path
     String? savePath;
     if (!saveToPhotos) {
@@ -580,31 +572,33 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
 
         // Save based on destination
         if (saveToPhotos) {
-          // gal requires a file path, so write to temp first
+          // Write to temp file first
           final tempDir = await getTemporaryDirectory();
           final tempPath = '${tempDir.path}/$newFileName';
           await File(tempPath).writeAsBytes(encodedImage);
 
           try {
-            await Gal.putImage(tempPath);
-          } catch (e) {
-            // On macOS, Flutter has a known issue loading Info.plist which can
-            // cause gal to crash. Prompt user to choose a different save location.
             if (Platform.isMacOS) {
-              // Clean up temp file
-              try {
-                await File(tempPath).delete();
-              } catch (_) {}
-
-              state = state.copyWith(
-                isResizing: false,
-                snackbarMessage:
-                    'Unable to save to Photos app. Please choose a different save location.',
+              // Use photo_manager on macOS (uses PhotoKit)
+              await PhotoManager.editor.saveImageWithPath(
+                tempPath,
+                title: newFileName,
               );
-              return;
             } else {
-              rethrow;
+              // Use gal on iOS/Android
+              await Gal.putImage(tempPath);
             }
+          } catch (e) {
+            // Clean up temp file
+            try {
+              await File(tempPath).delete();
+            } catch (_) {}
+
+            state = state.copyWith(
+              isResizing: false,
+              snackbarMessage: 'Unable to save to Photos app: ${e.toString()}',
+            );
+            return;
           }
 
           // Clean up temp file
