@@ -630,19 +630,25 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
           try {
             if (Platform.isMacOS) {
               // Use photo_manager on macOS (uses PhotoKit)
+              print('DEBUG: Attempting to save to macOS Photo Library: $tempPath');
+              print('DEBUG: Filename: $newFileName');
               await PhotoManager.editor.saveImageWithPath(
                 tempPath,
                 title: newFileName,
               );
+              print('DEBUG: Successfully saved to Photo Library');
             } else {
               // Use gal on iOS/Android
               await Gal.putImage(tempPath);
             }
-          } catch (e) {
+          } catch (e, stackTrace) {
             // Clean up temp file
             try {
               await File(tempPath).delete();
             } catch (_) {}
+
+            print('ERROR: Failed to save to Photos app: $e');
+            print('STACK TRACE: $stackTrace');
 
             state = state.copyWith(
               isResizing: false,
