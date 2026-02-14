@@ -469,20 +469,10 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
     if (!saveToPhotos) {
       savePath = state.saveDirectory;
 
-      // If no save directory is set, try to get a default one
+      // If no save directory is set, prompt user to select one
       if (savePath == null || savePath.isEmpty) {
-        final defaultDownloads = await fileSystemService.getDownloadsDirectoryPath();
-        if (defaultDownloads != null) {
-          savePath = defaultDownloads;
-          state = state.copyWith(saveDirectory: savePath);
-        } else {
-          final selectedPath = await selectSaveDirectory();
-          savePath = selectedPath;
-          if (savePath == null) {
-            state = state.copyWith(snackbarMessage: 'Please select a save directory.');
-            return;
-          }
-        }
+        state = state.copyWith(snackbarMessage: 'Please select a save directory.');
+        return;
       }
 
       // Verify the directory exists and is writable
