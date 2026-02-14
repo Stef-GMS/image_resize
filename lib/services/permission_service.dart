@@ -11,10 +11,14 @@ class PermissionService {
     if (Platform.isMacOS) {
       // Use photo_manager on macOS
       try {
+        print('DEBUG: Requesting macOS Photo Library permission via photo_manager');
         final PermissionState ps = await PhotoManager.requestPermissionExtend();
+        print('DEBUG: Permission state: ${ps.name}, hasAccess: ${ps.hasAccess}');
         return ps.hasAccess;
-      } catch (e) {
+      } catch (e, stackTrace) {
         // If permission request fails, return false
+        print('ERROR: photo_manager permission request failed: $e');
+        print('STACK TRACE: $stackTrace');
         return false;
       }
     } else {
