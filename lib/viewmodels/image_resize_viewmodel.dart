@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:exif/exif.dart';
 import 'package:file_picker/file_picker.dart';
@@ -16,6 +17,7 @@ import 'package:image_resize/services/file_system_service.dart';
 import 'package:image_resize/services/image_processing_service.dart';
 import 'package:image_resize/services/permission_service.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:photo_manager/photo_manager.dart';
 
 final tagXResolution = img.exifTagNameToID['XResolution']!;
 final tagYResolution = img.exifTagNameToID['YResolution']!;
@@ -467,16 +469,6 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
 
     final saveToPhotos = state.saveDestination == SaveDestination.devicePhotos;
 
-    // On macOS, block saving to Photos - both gal and photo_manager crash
-    if (Platform.isMacOS && saveToPhotos) {
-      state = state.copyWith(
-        isResizing: false,
-        snackbarMessage:
-            'Saving to Photos is not supported on macOS. Please choose "Device File System" or "Cloud" instead.',
-      );
-      return;
-    }
-
     // For file system / cloud saving, resolve the save path
     String? savePath;
     if (!saveToPhotos) {
@@ -644,23 +636,36 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
 
         // Save based on destination
         if (saveToPhotos) {
-          // Write to temp file first
-          final tempDir = await getTemporaryDirectory();
-          final tempPath = '${tempDir.path}/$newFileName';
-          await File(tempPath).writeAsBytes(encodedImage);
-
           try {
-            // Use gal on all platforms (iOS, Android, macOS)
-            print('DEBUG: Attempting to save to Photo Library: $tempPath');
-            print('DEBUG: Filename: $newFileName');
-            await Gal.putImage(tempPath);
-            print('DEBUG: Successfully saved to Photo Library');
-          } catch (e, stackTrace) {
-            // Clean up temp file
-            try {
-              await File(tempPath).delete();
-            } catch (_) {}
+            if (Platform.isMacOS) {
+              // Use photo_manager on macOS with saveImage() method
+              print('DEBUG: Attempting to save to macOS Photo Library using photo_manager');
+              print('DEBUG: Filename: $newFileName');
+              final result = await PhotoManager.editor.saveImage(
+                Uint8List.fromList(encodedImage),
+                filename: newFileName,
+              );
+              if (result != null) {
+                print('DEBUG: Successfully saved to Photo Library');
+              } else {
+                throw Exception('saveImage returned null');
+              }
+            } else {
+              // Use gal on iOS/Android - requires file path
+              final tempDir = await getTemporaryDirectory();
+              final tempPath = '${tempDir.path}/$newFileName';
+              await File(tempPath).writeAsBytes(encodedImage);
 
+              print('DEBUG: Attempting to save to Photo Library using gal: $tempPath');
+              await Gal.putImage(tempPath);
+              print('DEBUG: Successfully saved to Photo Library');
+
+              // Clean up temp file
+              try {
+                await File(tempPath).delete();
+              } catch (_) {}
+            }
+          } catch (e, stackTrace) {
             print('ERROR: Failed to save to Photos app: $e');
             print('STACK TRACE: $stackTrace');
 
@@ -670,11 +675,6 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
             );
             return;
           }
-
-          // Clean up temp file
-          try {
-            await File(tempPath).delete();
-          } catch (_) {}
         } else {
           // Determine final filename (with sequence number if needed)
           String finalFileName = newFileName;
