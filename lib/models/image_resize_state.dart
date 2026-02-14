@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:image/image.dart' as img;
 import 'package:image_resize/models/dimension_unit_type.dart';
+import 'package:image_resize/models/file_conflict_info.dart';
 import 'package:image_resize/models/image_resize_output_format.dart';
 import 'package:image_resize/models/save_destination.dart';
 
@@ -34,6 +35,7 @@ class ImageResizeState {
   final String? snackbarMessage;
   final bool hasResized;
   final List<Uint8List>? resizedImagesData;
+  final FileConflictInfo? fileConflict;
 
   const ImageResizeState({
     required this.width,
@@ -60,6 +62,7 @@ class ImageResizeState {
     this.snackbarMessage,
     required this.hasResized,
     this.resizedImagesData,
+    this.fileConflict,
   });
 
   /// Creates the initial state for the image resize screen.
@@ -88,6 +91,7 @@ class ImageResizeState {
     snackbarMessage: null,
     hasResized: false,
     resizedImagesData: null,
+    fileConflict: null,
   );
 
   ImageResizeState copyWith({
@@ -115,6 +119,7 @@ class ImageResizeState {
     String? snackbarMessage,
     bool? hasResized,
     List<Uint8List>? resizedImagesData,
+    FileConflictInfo? fileConflict,
   }) {
     return ImageResizeState(
       width: width ?? this.width,
@@ -141,6 +146,7 @@ class ImageResizeState {
       snackbarMessage: snackbarMessage ?? this.snackbarMessage,
       hasResized: hasResized ?? this.hasResized,
       resizedImagesData: resizedImagesData ?? this.resizedImagesData,
+      fileConflict: fileConflict ?? this.fileConflict,
     );
   }
 
@@ -172,7 +178,8 @@ class ImageResizeState {
           resetOptionsOnClear == other.resetOptionsOnClear &&
           snackbarMessage == other.snackbarMessage &&
           hasResized == other.hasResized &&
-          listEquals(resizedImagesData, other.resizedImagesData);
+          listEquals(resizedImagesData, other.resizedImagesData) &&
+          fileConflict == other.fileConflict;
 
   @override
   int get hashCode =>
@@ -199,5 +206,6 @@ class ImageResizeState {
       resetOptionsOnClear.hashCode ^
       snackbarMessage.hashCode ^
       hasResized.hashCode ^
-      resizedImagesData.hashCode;
+      resizedImagesData.hashCode ^
+      fileConflict.hashCode;
 }
