@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:image/image.dart' as img;
 import 'package:image_resize/models/dimension_unit_type.dart';
 import 'package:image_resize/models/file_conflict_info.dart';
+import 'package:image_resize/models/file_conflict_state.dart';
 import 'package:image_resize/models/image_resize_output_format.dart';
 import 'package:image_resize/models/save_destination.dart';
 
@@ -30,13 +31,12 @@ class ImageResizeState {
   final SaveDestination saveDestination;
   final String? saveDirectory;
   final bool isResizing;
-  final bool overwriteAll;
-  final bool useSequenceNumbers;
   final bool resetOptionsOnClear;
   final String? snackbarMessage;
   final bool hasResized;
   final List<Uint8List>? resizedImagesData;
-  final FileConflictInfo? fileConflict;
+  final FileConflictState fileConflictState;
+  final FileConflictInfo? conflictInfo;
 
   const ImageResizeState({
     required this.width,
@@ -58,13 +58,12 @@ class ImageResizeState {
     required this.saveDestination,
     this.saveDirectory,
     required this.isResizing,
-    required this.overwriteAll,
-    required this.useSequenceNumbers,
     required this.resetOptionsOnClear,
     this.snackbarMessage,
     required this.hasResized,
     this.resizedImagesData,
-    this.fileConflict,
+    required this.fileConflictState,
+    this.conflictInfo,
   });
 
   /// Creates the initial state for the image resize screen.
@@ -88,13 +87,12 @@ class ImageResizeState {
     saveDestination: SaveDestination.deviceFileSystem,
     saveDirectory: null,
     isResizing: false,
-    overwriteAll: false,
-    useSequenceNumbers: false,
     resetOptionsOnClear: true,
     snackbarMessage: null,
     hasResized: false,
     resizedImagesData: null,
-    fileConflict: null,
+    fileConflictState: FileConflictState.none,
+    conflictInfo: null,
   );
 
   ImageResizeState copyWith({
@@ -117,13 +115,12 @@ class ImageResizeState {
     SaveDestination? saveDestination,
     String? saveDirectory,
     bool? isResizing,
-    bool? overwriteAll,
-    bool? useSequenceNumbers,
     bool? resetOptionsOnClear,
     String? snackbarMessage,
     bool? hasResized,
     List<Uint8List>? resizedImagesData,
-    FileConflictInfo? fileConflict,
+    FileConflictState? fileConflictState,
+    FileConflictInfo? conflictInfo,
   }) {
     return ImageResizeState(
       width: width ?? this.width,
@@ -145,13 +142,12 @@ class ImageResizeState {
       saveDestination: saveDestination ?? this.saveDestination,
       saveDirectory: saveDirectory ?? this.saveDirectory,
       isResizing: isResizing ?? this.isResizing,
-      overwriteAll: overwriteAll ?? this.overwriteAll,
-      useSequenceNumbers: useSequenceNumbers ?? this.useSequenceNumbers,
       resetOptionsOnClear: resetOptionsOnClear ?? this.resetOptionsOnClear,
       snackbarMessage: snackbarMessage ?? this.snackbarMessage,
       hasResized: hasResized ?? this.hasResized,
       resizedImagesData: resizedImagesData ?? this.resizedImagesData,
-      fileConflict: fileConflict ?? this.fileConflict,
+      fileConflictState: fileConflictState ?? this.fileConflictState,
+      conflictInfo: conflictInfo ?? this.conflictInfo,
     );
   }
 
@@ -179,13 +175,12 @@ class ImageResizeState {
           saveDestination == other.saveDestination &&
           saveDirectory == other.saveDirectory &&
           isResizing == other.isResizing &&
-          overwriteAll == other.overwriteAll &&
-          useSequenceNumbers == other.useSequenceNumbers &&
           resetOptionsOnClear == other.resetOptionsOnClear &&
           snackbarMessage == other.snackbarMessage &&
           hasResized == other.hasResized &&
           listEquals(resizedImagesData, other.resizedImagesData) &&
-          fileConflict == other.fileConflict;
+          fileConflictState == other.fileConflictState &&
+          conflictInfo == other.conflictInfo;
 
   @override
   int get hashCode =>
@@ -208,11 +203,10 @@ class ImageResizeState {
       saveDestination.hashCode ^
       saveDirectory.hashCode ^
       isResizing.hashCode ^
-      overwriteAll.hashCode ^
-      useSequenceNumbers.hashCode ^
       resetOptionsOnClear.hashCode ^
       snackbarMessage.hashCode ^
       hasResized.hashCode ^
       resizedImagesData.hashCode ^
-      fileConflict.hashCode;
+      fileConflictState.hashCode ^
+      conflictInfo.hashCode;
 }
