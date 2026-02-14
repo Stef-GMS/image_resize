@@ -7,6 +7,7 @@ import 'package:gal/gal.dart';
 import 'package:image/image.dart' as img;
 import 'package:image_picker/image_picker.dart';
 import 'package:image_resize/models/dimension_unit_type.dart';
+import 'package:image_resize/models/file_conflict_info.dart';
 import 'package:image_resize/models/image_resize_output_format.dart';
 import 'package:image_resize/models/image_resize_state.dart';
 import 'package:image_resize/models/save_destination.dart';
@@ -194,6 +195,18 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
 
   void dismissSnackbar() {
     state = state.copyWith(snackbarMessage: null);
+  }
+
+  void dismissFileConflict() {
+    state = state.copyWith(fileConflict: null);
+  }
+
+  void setOverwriteAll(bool value) {
+    state = state.copyWith(overwriteAll: value);
+  }
+
+  void setUseSequenceNumbers(bool value) {
+    state = state.copyWith(useSequenceNumbers: value);
   }
   // endregion
 
@@ -393,6 +406,33 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
   // endregion
 
   // region Image Resizing and Saving Logic
+
+  /// Check if any files would be overwritten and return the list of conflicting filenames
+  Future<List<String>> _checkFileConflicts(
+    String savePath,
+    FileSystemService fileSystemService,
+  ) async {
+    final conflicts = <String>[];
+
+    for (final imageFile in state.selectedImages) {
+      final originalFileName = state.originalFileNames[imageFile.path];
+      final newFileName = fileSystemService.getNewFileName(
+        imageFile.path,
+        originalFileName,
+        state.baseFilename.isNotEmpty ? state.baseFilename : null,
+        state.suffix,
+        state.outputFormat,
+      );
+
+      final newPath = '$savePath/$newFileName';
+      if (await File(newPath).exists()) {
+        conflicts.add(newFileName);
+      }
+    }
+
+    return conflicts;
+  }
+
   Future<void> resizeImages() async {
     final imageProcessingService = ref.read(imageProcessingServiceProvider);
     final permissionService = ref.read(permissionServiceProvider);
@@ -485,8 +525,23 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
       return;
     }
 
+    // Check for file conflicts before starting resize (only for file system saves)
+    if (!saveToPhotos && savePath != null && !state.overwriteAll) {
+      final conflicts = await _checkFileConflicts(savePath, fileSystemService);
+      if (conflicts.isNotEmpty) {
+        // Set file conflict state to trigger UI dialog
+        state = state.copyWith(
+          fileConflict: FileConflictInfo(
+            filename: conflicts.length == 1 ? conflicts.first : '${conflicts.length} files',
+            fullPath: savePath,
+          ),
+        );
+        return; // Wait for user to resolve conflict
+      }
+    }
+
     if (hasPermission) {
-      state = state.copyWith(isResizing: true, overwriteAll: false);
+      state = state.copyWith(isResizing: true, overwriteAll: false, useSequenceNumbers: false);
 
       // Calculate actual pixel dimensions based on unit type
       final (pixelWidth, pixelHeight) = _calculatePixelDimensions();
@@ -615,7 +670,13 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
             await File(tempPath).delete();
           } catch (_) {}
         } else {
-          final newPath = '$savePath/$newFileName';
+          // Determine final filename (with sequence number if needed)
+          String finalFileName = newFileName;
+          if (state.useSequenceNumbers) {
+            finalFileName = await fileSystemService.getUniqueFileName(savePath!, newFileName);
+          }
+
+          final newPath = '$savePath/$finalFileName';
           await File(newPath).writeAsBytes(encodedImage);
         }
       }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_resize/viewmodels/image_resize_viewmodel.dart';
 import 'package:image_resize/widgets/dimensions_section.dart';
+import 'package:image_resize/widgets/file_conflict_dialog.dart';
 import 'package:image_resize/widgets/header_section.dart';
 import 'package:image_resize/widgets/options_section.dart';
 import 'package:image_resize/widgets/output_section.dart';
@@ -72,6 +73,35 @@ class _ImageResizeScreenState extends ConsumerState<ImageResizeScreen> {
       if (message != null) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
         notifier.dismissSnackbar();
+      }
+    });
+
+    // Listen for file conflicts and show dialog
+    ref.listen(imageResizeViewModelProvider.select((s) => s.fileConflict), (_, conflict) {
+      if (conflict != null) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => FileConflictDialog(
+            filename: conflict.filename,
+            onOverwrite: () {
+              Navigator.of(context).pop();
+              notifier.dismissFileConflict();
+              notifier.setOverwriteAll(true);
+              notifier.resizeImages(); // Retry with overwrite enabled
+            },
+            onAddSequence: () {
+              Navigator.of(context).pop();
+              notifier.dismissFileConflict();
+              notifier.setUseSequenceNumbers(true);
+              notifier.resizeImages(); // Retry with sequence numbering enabled
+            },
+            onCancel: () {
+              Navigator.of(context).pop();
+              notifier.dismissFileConflict();
+            },
+          ),
+        );
       }
     });
 

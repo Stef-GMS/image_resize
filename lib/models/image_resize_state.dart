@@ -31,6 +31,7 @@ class ImageResizeState {
   final String? saveDirectory;
   final bool isResizing;
   final bool overwriteAll;
+  final bool useSequenceNumbers;
   final bool resetOptionsOnClear;
   final String? snackbarMessage;
   final bool hasResized;
@@ -58,6 +59,7 @@ class ImageResizeState {
     this.saveDirectory,
     required this.isResizing,
     required this.overwriteAll,
+    required this.useSequenceNumbers,
     required this.resetOptionsOnClear,
     this.snackbarMessage,
     required this.hasResized,
@@ -87,6 +89,7 @@ class ImageResizeState {
     saveDirectory: null,
     isResizing: false,
     overwriteAll: false,
+    useSequenceNumbers: false,
     resetOptionsOnClear: true,
     snackbarMessage: null,
     hasResized: false,
@@ -115,6 +118,7 @@ class ImageResizeState {
     String? saveDirectory,
     bool? isResizing,
     bool? overwriteAll,
+    bool? useSequenceNumbers,
     bool? resetOptionsOnClear,
     String? snackbarMessage,
     bool? hasResized,
@@ -142,6 +146,7 @@ class ImageResizeState {
       saveDirectory: saveDirectory ?? this.saveDirectory,
       isResizing: isResizing ?? this.isResizing,
       overwriteAll: overwriteAll ?? this.overwriteAll,
+      useSequenceNumbers: useSequenceNumbers ?? this.useSequenceNumbers,
       resetOptionsOnClear: resetOptionsOnClear ?? this.resetOptionsOnClear,
       snackbarMessage: snackbarMessage ?? this.snackbarMessage,
       hasResized: hasResized ?? this.hasResized,
@@ -175,6 +180,7 @@ class ImageResizeState {
           saveDirectory == other.saveDirectory &&
           isResizing == other.isResizing &&
           overwriteAll == other.overwriteAll &&
+          useSequenceNumbers == other.useSequenceNumbers &&
           resetOptionsOnClear == other.resetOptionsOnClear &&
           snackbarMessage == other.snackbarMessage &&
           hasResized == other.hasResized &&
@@ -203,6 +209,7 @@ class ImageResizeState {
       saveDirectory.hashCode ^
       isResizing.hashCode ^
       overwriteAll.hashCode ^
+      useSequenceNumbers.hashCode ^
       resetOptionsOnClear.hashCode ^
       snackbarMessage.hashCode ^
       hasResized.hashCode ^
