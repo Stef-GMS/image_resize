@@ -602,13 +602,15 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
           }
         }
 
-        final image = img.decodeImage(await imageFile.readAsBytes());
+        final originalBytes = await imageFile.readAsBytes();
+        print('DEBUG: Read ${originalBytes.length} bytes from ${imageFile.path}');
+
+        final image = img.decodeImage(originalBytes);
         if (image == null) {
           state = state.copyWith(snackbarMessage: 'Error decoding image: ${imageFile.path}');
           continue;
         }
-
-        final originalBytes = await imageFile.readAsBytes();
+        print('DEBUG: Decoded image: ${image.width}x${image.height}');
 
         final resizedBytes = await imageProcessingService.resizeImage(
           imageData: originalBytes,
@@ -624,6 +626,7 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
           );
           continue;
         }
+        print('DEBUG: Resized image: ${resizedImage.width}x${resizedImage.height}');
 
         final resolution = int.tryParse(state.resolution) ?? 72;
 
@@ -712,6 +715,7 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
           }
 
           await File(newPath).writeAsBytes(encodedImage);
+          print('DEBUG: Wrote ${encodedImage.length} bytes to $newPath');
         }
       }
 
