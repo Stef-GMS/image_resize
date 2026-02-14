@@ -4,12 +4,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_resize/screens/image_resize_screen.dart';
 import 'package:image_resize/theme.dart';
+import 'package:native_image_picker_macos/native_image_picker_macos.dart';
 import 'package:window_manager/window_manager.dart';
 
 /// Main entry point of the application.
 void main() async {
   if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
     WidgetsFlutterBinding.ensureInitialized();
+
+    // Register native image picker for macOS 13+ (uses PHPicker for Photos app access)
+    if (Platform.isMacOS) {
+      await NativeImagePickerMacOS.registerWithIfSupported();
+    }
+
     await windowManager.ensureInitialized();
 
     await windowManager.setMinimumSize(const Size(409, 800));
