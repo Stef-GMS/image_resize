@@ -8,6 +8,7 @@ import 'package:image/image.dart' as img;
 import 'package:image_picker/image_picker.dart';
 import 'package:image_resize/models/dimension_unit_type.dart';
 import 'package:image_resize/models/file_conflict_info.dart';
+import 'package:image_resize/models/file_conflict_state.dart';
 import 'package:image_resize/models/image_resize_output_format.dart';
 import 'package:image_resize/models/image_resize_state.dart';
 import 'package:image_resize/models/save_destination.dart';
@@ -197,16 +198,19 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
     state = state.copyWith(snackbarMessage: null);
   }
 
-  void dismissFileConflict() {
-    state = state.copyWith(fileConflict: null);
+  void setFileConflictResolved() {
+    state = state.copyWith(
+      fileConflictState: FileConflictState.none,
+      conflictInfo: null,
+    );
   }
 
-  void setOverwriteAll(bool value) {
-    state = state.copyWith(overwriteAll: value);
+  void setFileConflictOverwrite() {
+    state = state.copyWith(fileConflictState: FileConflictState.overwrite);
   }
 
-  void setUseSequenceNumbers(bool value) {
-    state = state.copyWith(useSequenceNumbers: value);
+  void setFileConflictAddSequence() {
+    state = state.copyWith(fileConflictState: FileConflictState.addSequence);
   }
   // endregion
 
@@ -392,6 +396,7 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
       state = ImageResizeState.initial();
     } else {
       // Only clear images and related fields, keep user settings (width, height, dimension type, etc.)
+      // But always clear saveDirectory per user request
       state = state.copyWith(
         selectedImages: [],
         originalFileNames: {},
@@ -400,6 +405,7 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
         baseFilename: '',
         resizedImagesData: null,
         hasResized: false,
+        saveDirectory: null,
       );
     }
   }
@@ -526,13 +532,14 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
     }
 
     // Check for file conflicts before starting resize (only for file system saves)
-    // Skip check if user has already made a choice (overwriteAll or useSequenceNumbers)
-    if (!saveToPhotos && savePath != null && !state.overwriteAll && !state.useSequenceNumbers) {
+    // Skip check if user has already made a choice
+    if (!saveToPhotos && savePath != null && state.fileConflictState == FileConflictState.none) {
       final conflicts = await _checkFileConflicts(savePath, fileSystemService);
       if (conflicts.isNotEmpty) {
-        // Set file conflict state to trigger UI dialog
+        // Set conflict state to pending and store conflict info
         state = state.copyWith(
-          fileConflict: FileConflictInfo(
+          fileConflictState: FileConflictState.pending,
+          conflictInfo: FileConflictInfo(
             filename: conflicts.length == 1 ? conflicts.first : '${conflicts.length} files',
             fullPath: savePath,
           ),
@@ -657,14 +664,15 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
         } else {
           // Determine final filename (with sequence number if needed)
           String finalFileName = newFileName;
-          if (state.useSequenceNumbers) {
+          if (state.fileConflictState == FileConflictState.addSequence) {
             finalFileName = await fileSystemService.getUniqueFileName(savePath!, newFileName);
           }
 
           final newPath = '$savePath/$finalFileName';
 
           // Delete existing file if overwrite mode is enabled
-          if (state.overwriteAll && await File(newPath).exists()) {
+          if (state.fileConflictState == FileConflictState.overwrite &&
+              await File(newPath).exists()) {
             try {
               await File(newPath).delete();
             } catch (e) {
@@ -688,9 +696,8 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
         hasResized: false,
         resizedImagesData: null,
         snackbarMessage: successMessage,
-        overwriteAll: false,
-        useSequenceNumbers: false,
-        fileConflict: null,
+        fileConflictState: FileConflictState.none,
+        conflictInfo: null,
       );
     }
   }
