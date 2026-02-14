@@ -382,10 +382,15 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
       print('DEBUG: Setting base filename from file path: $baseFilename');
     }
 
+    // Only set saveDirectory when picking from filesystem (not from Photos)
+    // originalNames == null means filesystem pick
+    final saveDir = originalNames == null ? File(paths.first).parent.path : null;
+
     state = state.copyWith(
       selectedImages: [...state.selectedImages, ...paths.map((p) => File(p))],
       originalFileNames: {...state.originalFileNames, ...?originalNames},
       baseFilename: baseFilename,
+      saveDirectory: saveDir,
     );
   }
 

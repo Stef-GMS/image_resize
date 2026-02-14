@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
+enum FileConflictChoice { none, overwrite, addSequence }
+
 /// Dialog shown when file conflicts are detected during save.
-class FileConflictDialog extends StatelessWidget {
+class FileConflictDialog extends StatefulWidget {
   const FileConflictDialog({
     super.key,
     required this.filename,
@@ -14,6 +16,13 @@ class FileConflictDialog extends StatelessWidget {
   final VoidCallback onOverwrite;
   final VoidCallback onAddSequence;
   final VoidCallback onCancel;
+
+  @override
+  State<FileConflictDialog> createState() => _FileConflictDialogState();
+}
+
+class _FileConflictDialogState extends State<FileConflictDialog> {
+  FileConflictChoice _selectedChoice = FileConflictChoice.none;
 
   @override
   Widget build(BuildContext context) {
@@ -31,7 +40,7 @@ class FileConflictDialog extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            filename,
+            widget.filename,
             style: theme.textTheme.bodyMedium?.copyWith(
               fontWeight: FontWeight.bold,
             ),
@@ -41,20 +50,45 @@ class FileConflictDialog extends StatelessWidget {
             'How would you like to proceed?',
             style: theme.textTheme.bodyMedium,
           ),
+          const SizedBox(height: 12),
+          RadioListTile<FileConflictChoice>(
+            title: const Text('Overwrite All'),
+            value: FileConflictChoice.overwrite,
+            groupValue: _selectedChoice,
+            onChanged: (value) {
+              setState(() {
+                _selectedChoice = value!;
+              });
+            },
+          ),
+          RadioListTile<FileConflictChoice>(
+            title: const Text('Add Sequence Numbers'),
+            value: FileConflictChoice.addSequence,
+            groupValue: _selectedChoice,
+            onChanged: (value) {
+              setState(() {
+                _selectedChoice = value!;
+              });
+            },
+          ),
         ],
       ),
       actions: [
         TextButton(
-          onPressed: onCancel,
+          onPressed: widget.onCancel,
           child: const Text('Cancel'),
         ),
-        TextButton(
-          onPressed: onAddSequence,
-          child: const Text('Add Sequence Numbers'),
-        ),
         FilledButton(
-          onPressed: onOverwrite,
-          child: const Text('Overwrite All'),
+          onPressed: _selectedChoice == FileConflictChoice.none
+              ? null
+              : () {
+                  if (_selectedChoice == FileConflictChoice.overwrite) {
+                    widget.onOverwrite();
+                  } else if (_selectedChoice == FileConflictChoice.addSequence) {
+                    widget.onAddSequence();
+                  }
+                },
+          child: const Text('Resize'),
         ),
       ],
     );
