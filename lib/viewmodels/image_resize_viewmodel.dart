@@ -16,7 +16,6 @@ import 'package:image_resize/services/file_system_service.dart';
 import 'package:image_resize/services/image_processing_service.dart';
 import 'package:image_resize/services/permission_service.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:photo_manager/photo_manager.dart';
 
 final tagXResolution = img.exifTagNameToID['XResolution']!;
 final tagYResolution = img.exifTagNameToID['YResolution']!;
@@ -641,19 +640,11 @@ class ImageResizeViewModel extends Notifier<ImageResizeState> {
           await File(tempPath).writeAsBytes(encodedImage);
 
           try {
-            if (Platform.isMacOS) {
-              // Use photo_manager on macOS (uses PhotoKit)
-              print('DEBUG: Attempting to save to macOS Photo Library: $tempPath');
-              print('DEBUG: Filename: $newFileName');
-              await PhotoManager.editor.saveImageWithPath(
-                tempPath,
-                title: newFileName,
-              );
-              print('DEBUG: Successfully saved to Photo Library');
-            } else {
-              // Use gal on iOS/Android
-              await Gal.putImage(tempPath);
-            }
+            // Use gal on all platforms (iOS, Android, macOS)
+            print('DEBUG: Attempting to save to Photo Library: $tempPath');
+            print('DEBUG: Filename: $newFileName');
+            await Gal.putImage(tempPath);
+            print('DEBUG: Successfully saved to Photo Library');
           } catch (e, stackTrace) {
             // Clean up temp file
             try {
